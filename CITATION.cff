@@ -1,0 +1,17 @@
+# YAML 1.2
+---
+authors: 
+  -
+    family-names: McLain
+    given-names: "Alexander C."
+  -
+    family-names: Zgodic
+    given-names: Anja
+cff-version: "1.1.0"
+date-released: 2021=09-01
+message: "If you use this software, please cite it using these metadata."
+title: "Fitting high-dimensional linear regression models with unhidem"
+version: "1.0"
+date-released: 2021-09-01
+url: "https://github.com/alexmclain/UNHIDEM"
+...

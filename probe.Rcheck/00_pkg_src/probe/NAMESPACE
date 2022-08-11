@@ -1,0 +1,7 @@
+useDynLib(probe, .registration=TRUE)
+importFrom(Rcpp, evalCpp)
+importFrom("graphics", "axis", "mtext", "par", "points", "legend")
+importFrom("stats", "cor", "density", "dnorm", "dt", "influence", "lm", "p.adjust", "pnorm", "predict", "pt", "qnorm", "qt", "quantile", "smooth.spline", "var", "vcov", "pchisq")
+## export all regularly named functions
+## (but allow for private functions whose name starts with a dot).name <- function(...)
+exportPattern("^[[:alpha:]]+")

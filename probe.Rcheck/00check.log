@@ -1,0 +1,118 @@
+* using log directory ‘/Users/mclainfamily/Library/CloudStorage/OneDrive-UniversityofSouthCarolina/Research/Imaging/PROBE/Programs/PROBE/probe.Rcheck’
+* using R version 4.1.3 (2022-03-10)
+* using platform: x86_64-apple-darwin17.0 (64-bit)
+* using session charset: UTF-8
+* checking for file ‘probe/DESCRIPTION’ ... OK
+* checking extension type ... Package
+* this is package ‘probe’ version ‘1.0’
+* package encoding: UTF-8
+* checking package namespace information ... OK
+* checking package dependencies ... OK
+* checking if this is a source package ... OK
+* checking if there is a namespace ... OK
+* checking for executable files ... OK
+* checking for hidden files and directories ... OK
+* checking for portable file names ... OK
+* checking for sufficient/correct file permissions ... OK
+* checking whether package ‘probe’ can be installed ... OK
+* checking installed package size ... OK
+* checking package directory ... OK
+* checking DESCRIPTION meta-information ... OK
+* checking top-level files ... OK
+* checking for left-over files ... OK
+* checking index information ... OK
+* checking package subdirectories ... OK
+* checking R files for non-ASCII characters ... OK
+* checking R files for syntax errors ... OK
+* checking whether the package can be loaded ... OK
+* checking whether the package can be loaded with stated dependencies ... OK
+* checking whether the package can be unloaded cleanly ... OK
+* checking whether the namespace can be loaded with stated dependencies ... OK
+* checking whether the namespace can be unloaded cleanly ... OK
+* checking loading without being on the library search path ... OK
+* checking dependencies in R code ... OK
+* checking S3 generic/method consistency ... OK
+* checking replacement functions ... OK
+* checking foreign function calls ... OK
+* checking R code for possible problems ... OK
+* checking Rd files ... OK
+* checking Rd metadata ... WARNING
+Rd files with duplicated alias 'probe':
+  ‘probe-package.Rd’ ‘probe.Rd’
+* checking Rd cross-references ... OK
+* checking for missing documentation entries ... WARNING
+Undocumented code objects:
+  ‘LM_by_col’ ‘LM_w_COVS_by_col’ ‘MVM’ ‘PROBE_cpp0_5_6’
+  ‘PROBE_cpp0_5_6_covs’ ‘Row_sum’ ‘e_step_func’ ‘lfdr_t_func’
+  ‘lr_cpp_func’ ‘m_step_cpp_func’ ‘m_update_func’ ‘pi0_func’
+  ‘probe_func’ ‘report_func’
+Undocumented data sets:
+  ‘Sim_data’ ‘Sim_data_cov’
+All user-level objects in a package should have documentation entries.
+See chapter ‘Writing R documentation files’ in the ‘Writing R
+Extensions’ manual.
+* checking for code/documentation mismatches ... WARNING
+Codoc mismatches from documentation object 'predict_probe_func':
+predict_probe_func
+  Code: function(res, Z, X = NULL, alpha = NULL, Z_2 = NULL)
+  Docs: function(res, Z = Z_test, alpha = alpha)
+  Argument names in code not in docs:
+    X Z_2
+  Mismatches in argument names:
+    Position: 3 Code: X Docs: alpha
+  Mismatches in argument default values:
+    Name: 'Z' Code:  Docs: Z_test
+    Name: 'alpha' Code: NULL Docs: alpha
+
+Codoc mismatches from documentation object 'probe':
+probe
+  Code: function(Y, Z, X = NULL, alpha = 0.05, ep = 0.1, maxit = 10000,
+                 Y_test = NULL, Z_test = NULL, X_test = NULL, verbose =
+                 FALSE, signal = NULL, eta_i = NULL, plot_ind = FALSE)
+  Docs: function(Y, Z, X, alpha, ep, B, adj, maxit, one.sided, Y_test,
+                 Z_test, X_test, verbose, signal, eta_i, plot_ind, LR,
+                 C)
+  Argument names in docs not in code:
+    B adj one.sided LR C
+  Mismatches in argument names (first 3):
+    Position: 6 Code: maxit Docs: B
+    Position: 7 Code: Y_test Docs: adj
+    Position: 8 Code: Z_test Docs: maxit
+  Mismatches in argument default values (first 3):
+    Name: 'X' Code: NULL Docs: 
+    Name: 'alpha' Code: 0.05 Docs: 
+    Name: 'ep' Code: 0.1 Docs: 
+
+* checking Rd \usage sections ... WARNING
+Undocumented arguments in documentation object 'm_step_regression'
+  ‘Y’
+Documented arguments not in \usage in documentation object 'm_step_regression':
+  ‘Y_dat’
+
+Documented arguments not in \usage in documentation object 'predict_probe_func':
+  ‘X’
+
+Undocumented arguments in documentation object 'probe'
+  ‘B’ ‘adj’ ‘one.sided’ ‘LR’ ‘C’
+
+Functions with \usage entries need to have the appropriate \alias
+entries, and all their arguments documented.
+The \usage entries must correspond to syntactically valid R code.
+See chapter ‘Writing R documentation files’ in the ‘Writing R
+Extensions’ manual.
+* checking Rd contents ... OK
+* checking for unstated dependencies in examples ... OK
+* checking contents of ‘data’ directory ... OK
+* checking data for non-ASCII characters ... OK
+* checking data for ASCII and uncompressed saves ... OK
+* checking line endings in C/C++/Fortran sources/headers ... OK
+* checking line endings in Makefiles ... OK
+* checking compilation flags in Makevars ... OK
+* checking for GNU extensions in Makefiles ... OK
+* checking for portable use of $(BLAS_LIBS) and $(LAPACK_LIBS) ... OK
+* checking use of PKG_*FLAGS in Makefiles ... OK
+* checking compiled code ... OK
+* checking examples ... OK
+* checking PDF version of manual ... OK
+* DONE
+Status: 4 WARNINGs

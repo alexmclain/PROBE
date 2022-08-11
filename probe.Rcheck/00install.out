@@ -1,0 +1,4 @@
+* installing *source* package ‘probe’ ...
+** using staged installation
+** libs
+clang++ -mmacosx-version-min=10.13 -std=gnu++11 -I"/Library/Frameworks/R.framework/Resources/include" -DNDEBUG  -I'/Library/Frameworks/R.framework/Versions/4.1/Resources/library/Rcpp/include' -I'/Library/Frameworks/R.framework/Versions/4.1/Resources/library/RcppArmadillo/include' -I/usr/local/include    -fPIC  -Wall -g -O2  -c PROBE_cpp0_5_6.cpp -o PROBE_cpp0_5_6.o
