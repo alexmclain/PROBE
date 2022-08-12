@@ -2,7 +2,7 @@
 % Please edit documentation in R/m_step_func.R
 \name{m_step_regression}
 \alias{m_step_regression}
-\title{A wrapper function providing the quantities related to the M-step for \eqn{\alpha_0} and \eqn{\sigma^2}.}
+\title{Function for fitting the initial part of the M-step}
 \usage{
 m_step_regression(Y, W, W2, X, a = -3/2, Int = TRUE)
 }

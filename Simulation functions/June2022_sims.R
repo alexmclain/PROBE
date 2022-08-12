@@ -10,20 +10,22 @@
 ### simulation_func will automatically create a csv file with the results, but will 
 ### also return all of the results.
 ### The methods use are:
-###   + UNHIDEM
-###   + Penalization methods: LASSO, Adaptive LASSO, SCAD, MCP
+###   + PROBE
+###   + Penalization methods: 
+###         -LASSO, 
+###         -Adaptive LASSO, 
+###         -SCAD, 
+###         -MCP,
 ###   + SSLASSO - Spike-and-Slab LASSO 
 ###   + varbvs -  Fully-factorized variational approximation for Bayesian variable 
 ###               selection
 ###   + sparsevb - Spike-and-Slab Variational Bayes
-###   + sparsevb_c - Spike-and-Slab Variational Bayes with calibration (discussed in 
-###                  paper)
 ###   + ebreg - Empirical Bayes sparse linear regression.
 
 
 remove(list=ls())
 source("Simulation functions/Sim_funcs.R")
-library(unhidem)
+library(probe)
 library(glmnet)
 library(sparsevb)
 library(varbvs)
@@ -50,7 +52,6 @@ parlist[par_num,]
 sim2 <- simulation_func(par_num, parlist, B = 10, bin = TRUE, ebreg_I = FALSE)
 
 ### Run for continuous with M=10000 for B=10 iterations without ebreg.
-### The difference between sparsevb and sparsevb_c is very evident here.
 par_num <- 47 
 parlist[par_num,]
 sim3 <- simulation_func(par_num, parlist, B = 10, bin = FALSE, ebreg_I = FALSE)

@@ -37,13 +37,19 @@ signal, eta_i, plot_ind)
 \value{
 A list including 
 
-* \code{beta_ast_hat} MAP estimates of the regression coefficients (\eqn{\beta^\ast}),
-* \code{beta_hat, beta_hat_var} MAP estimates of the posterior expectation (beta_hat) and variance (beta_hat_var) of the prior mean (\eqn{\beta}) of the regression coefficients assuming \eqn{\gamma=1}, 
-* \code{gamma_hat} the posterior expectation of the latent \eqn{\gamma} variables, 
-* \code{sigma2_est} MAP estimate of the residual variance, 
-* \code{E_step} full results of the final E_step, 
-* \code{Calb_mod} results of first (\eqn{\alpha_0}) part of the M-step,  
-* \code{count} the total number of iterations before convergence.
+\code{beta_ast_hat} MAP estimates of the regression coefficients (\eqn{\beta^\ast}),
+
+\code{beta_hat, beta_hat_var} MAP estimates of the posterior expectation (beta_hat) and variance (beta_hat_var) of the prior mean (\eqn{\beta}) of the regression coefficients assuming \eqn{\gamma=1}, 
+
+\code{gamma_hat} the posterior expectation of the latent \eqn{\gamma} variables, 
+
+\code{sigma2_est} MAP estimate of the residual variance, 
+
+\code{E_step} full results of the final E_step, 
+
+\code{Calb_mod} results of first (\eqn{\alpha_0}) part of the M-step,  
+
+\code{count} the total number of iterations before convergence.
 }
 \description{
 A wrapper function for the main PROBE algorithm function.  The R package is a work in progress.
@@ -56,7 +62,8 @@ alpha <- 0.05
 plot_ind <- TRUE
 
 # Run the analysis. Y_test and Z_test are included for plotting purposes only
-full_res <- probe( Y = Y, Z = Z, alpha = alpha, Y_test = Y_test, Z_test = Z_test, plot_ind = plot_ind)
+full_res <- probe( Y = Y, Z = Z, alpha = alpha, Y_test = Y_test, 
+Z_test = Z_test, plot_ind = plot_ind)
 
 # Predicting for test data
 pred_res <- predict_probe_func(full_res, Z = Z_test, alpha = alpha)
@@ -72,7 +79,8 @@ attach(Sim_data_cov)
 # Calculating the true signal (the impact of Z only)
 eta_i <- apply(t(Z)*beta_tr,2,sum) 
 # Run the analysis. eta_i (true signal) and signal are included for plotting purposes only.
-full_res <- probe( Y = Y, Z = Z, X = X, alpha = alpha, signal = signal, eta_i  = eta_i, plot_ind = plot_ind)
+full_res <- probe( Y = Y, Z = Z, X = X, alpha = alpha, 
+signal = signal, eta_i  = eta_i, plot_ind = plot_ind)
 
 # Final estimates of the impact of X versus the true values:
 data.frame(true_values = beta_X_tr, full_res$Calb_mod$res_data[-2,])
@@ -83,5 +91,5 @@ summary(lm(Y~X$Cont_cov + X$Binary_cov))$coefficients
 
 }
 \seealso{
-predict_probe_func to obtain predictions, confidence intervals and prediction intervals from PROBE.
+predict_probe_func to obtain predictions, credible intervals and prediction intervals from PROBE.
 }

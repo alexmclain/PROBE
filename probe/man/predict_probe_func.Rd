@@ -4,7 +4,7 @@
 \alias{predict_probe_func}
 \title{Obtaining predictions, confidence intervals and prediction intervals from probe}
 \usage{
-predict_probe_func(res, Z = Z, X = X, alpha = alpha)
+predict_probe_func(res, Z, X, alpha, Z_2)
 }
 \arguments{
 \item{res}{The results from the probe function.}
@@ -21,7 +21,7 @@ predict_probe_func(res, Z = Z, X = X, alpha = alpha)
 A dataframe with predictions, confidence intervals, and prediction intervals for each new observation.
 }
 \description{
-A function providing predictions, along with (1-alpha)*100% credible, and prediction intervals for new observations.
+A function providing predictions, along with \eqn{(1-\alpha)*100\%} credible, and prediction intervals for new observations.
 }
 \examples{
 ### Example
@@ -34,7 +34,7 @@ plot_ind <- TRUE
 full_res <- probe( Y = Y, Z = Z, alpha = alpha, plot_ind = plot_ind, Y_test = Y_test, Z_test = Z_test)
 
 # Predicting for test data
-pred_res <- predict_probe_func(full_res, Z = Z_test X = NULL, alpha = alpha)
+pred_res <- predict_probe_func(full_res, Z = Z_test, X = NULL, alpha = alpha)
 head(pred_res)
 
 }

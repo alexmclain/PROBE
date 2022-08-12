@@ -1,5 +1,5 @@
-#' A wrapper function providing the quantities related to the M-step for \eqn{\alpha_0} and \eqn{\sigma^2}.
-#'
+#' @title Function for fitting the initial part of the M-step
+#' @description A wrapper function providing the quantities related to the M-step for \eqn{\alpha_0} and \eqn{\sigma^2}.
 #' @param Y A matrix containing the outcome \code{Y}
 #' @param W Quantity \eqn{E(W_0)} as outlined in citation, output from W_update_fun
 #' @param W2 Quantity \eqn{E(W^2_0)} as outlined in citation, output from W_update_fun
@@ -100,4 +100,54 @@ m_step_regression <- function(Y, W, W2, X, a = -3/2, Int = TRUE) {
          R_squared, Y_pred = Y_pred, hat = hat, resid = resid, 
        VCV = VCV, res_data = res_data)
   
+}
+
+m_step_cpp_func <- function(Y, Z, X, W_ast, W_ast_var, delta, 
+                            beta_vec, Z_2, sigma2) {
+  
+  N <- length(Y)
+  if (!is.null(X)) {
+    p <- ncol(X)
+    LRcpp <- PROBE_cpp0_5_6_covs(Y, Z, W_ast, W_ast_var, delta, 
+                                 beta_vec, Z_2, sigma2, as.matrix(X))
+  } else {
+    p <- 0
+    LRcpp <- PROBE_cpp0_5_6(Y, Z, W_ast, W_ast_var, delta, 
+                            beta_vec, Z_2, sigma2)
+  }
+  t_val <- LRcpp$T_statistics
+  
+  ret <- list(coef = LRcpp$Coefficients, obs_SE = LRcpp$StdErr, T_val = t_val)
+  
+  return(ret)
+}
+
+lr_cpp_func <- function(Y, Z, X = NULL, sigma2) {
+  
+  N <- length(Y)
+  if (!is.null(X)) {
+    p <- ncol(X)
+    LRcpp <- LM_w_COVS_by_col(Y, Z, as.matrix(X), sigma2)
+  } else {
+    p <- 0
+    LRcpp <- LM_by_col(Y, Z, sigma2)
+  }
+  t_val <- LRcpp$Coefficients[, 2]/LRcpp$StdErr[, 2]
+  
+  ret <- list(coef = LRcpp$Coefficients, obs_SE = LRcpp$StdErr, T_val = t_val)
+  return(ret)
+}
+
+
+m_update_func <- function(Z,Z_2,beta_tilde, delta, beta_tilde_var=0){
+  Z_delta <- MVM(Z,delta*beta_tilde)$Res 
+  W_ast<- c(Row_sum(as.matrix(Z_delta))$Rowsum)
+  W_ast[is.nan(W_ast) | is.na(W_ast)] <- 0
+  W_ast_var <- NULL
+  if(!is.null(Z_2)){
+    Z_delta2 <- MVM(Z_2,beta_tilde^2*delta*(1-delta) + delta*beta_tilde_var)$Res 
+    W_ast_var <- c(Row_sum(as.matrix(Z_delta2))$Rowsum)
+    W_ast_var[is.nan(W_ast_var) | is.na(W_ast_var)] <- 0
+  }
+  return(list(W_ast=W_ast,W_ast_var=W_ast_var))
 }

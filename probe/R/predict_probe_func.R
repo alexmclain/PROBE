@@ -1,8 +1,8 @@
 #' @title Obtaining predictions, confidence intervals and prediction intervals from probe
-#' @description A function providing predictions, along with (1-alpha)*100% credible, and prediction intervals for new observations.
+#' @description A function providing predictions, along with \eqn{(1-\alpha)*100\%} credible, and prediction intervals for new observations.
 #'
 #'
-#' @usage predict_probe_func(res, Z = Z, X = X, alpha = alpha)
+#' @usage predict_probe_func(res, Z, X, alpha, Z_2)
 #' @param res The results from the probe function.
 #' @param Z A matrix containing the predictors on which to apply the probe algorithm
 #' @param X (optional) A matrix or dataframe of predictors not subjected to the sparsity assumption to account for.
@@ -20,10 +20,10 @@
 #' full_res <- probe( Y = Y, Z = Z, alpha = alpha, plot_ind = plot_ind, Y_test = Y_test, Z_test = Z_test)
 #' 
 #' # Predicting for test data
-#' pred_res <- predict_probe_func(full_res, Z = Z_test X = NULL, alpha = alpha)
+#' pred_res <- predict_probe_func(full_res, Z = Z_test, X = NULL, alpha = alpha)
 #' head(pred_res)
 #' 
-predict_probe_func <- function(res, Z, X = NULL, alpha = NULL, 
+predict_probe_func <- function(res, Z, X = NULL, alpha = 0.05, 
                                  Z_2 = NULL) {
   E_step <- res$E_step
   mod <- res$Calb_mod

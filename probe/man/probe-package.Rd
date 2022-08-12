@@ -1,6 +1,5 @@
 \name{probe-package}
 \alias{probe-package}
-\alias{probe}
 \docType{package}
 \title{\packageTitle{probe}}
 \description{\packageDescription{probe}}

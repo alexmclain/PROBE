@@ -45,10 +45,10 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
   
   
   
-  UNHIDEM_res <- matrix(0,K,13)
-  colnames(UNHIDEM_res) <- c("Sum_delta", "Sum_delta_sig", "MSE", "MAD", "ECP_PI", 
+  PROBE_res <- matrix(0,K,13)
+  colnames(PROBE_res) <- c("Sum_delta", "Sum_delta_sig", "MSE", "MAD", "ECP_PI", 
                              "ECP_CI", "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", "Beta_err", 
-                             "Conv", "Time")
+                             "Conv", "time")
   
   varbvs_res <- SSLASSO_res <- sparsevb_res <- sparsevb_c_res <- matrix(-999,K,8)
   LASSO_res <- adap_LASSO_res <- SCAD_res <- MCP_res <- matrix(-999,K,8)
@@ -135,7 +135,7 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
     eta_test <- apply(t(Z_test)*c(eta_vec),2,sum)
     Y_test <- eta_test + rnorm(N,0,sigma)
     
-    test3 <- system.time(mod.out <- unhidem(Y = Y, Z = Z, alpha = alpha, eta_i = eta_i, 
+    test3 <- system.time(mod.out <- probe(Y = Y, Z = Z, alpha = alpha, eta_i = eta_i, 
                                             signal = signal))
     
     alpha_est <- mod.out$Calb_mod$coef[2]
@@ -146,13 +146,13 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
     Y_pred <- mod.out$Calb_mod$Y_pred
     
     #Prediction for test data
-    pred_res_test <- predict_unhidem_func(mod.out, Z_test, X = NULL, alpha = alpha)
+    pred_res_test <- predict_probe_func(mod.out, Z_test, X = NULL, alpha = alpha)
     # Proportion of test PIs that contain the test observation
     ECP_PI <- mean(1*I(Y_test>pred_res_test$PI_L & Y_test<pred_res_test$PI_U))
     # Proportion of test CIs that contain the test true signal
     ECP_CI <- mean(1*I(eta_test>pred_res_test$CI_L & eta_test<pred_res_test$CI_U))
     
-    UNHIDEM_res[k,] <- c(sum(gamma_est),
+    PROBE_res[k,] <- c(sum(gamma_est),
                          sum(gamma_est[signal]), 
                          mean((Y_pred-eta_i)^2), 
                          median(abs(Y_pred - eta_i)), ECP_PI, ECP_CI,   
@@ -353,36 +353,35 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
     }
     
     if(ebreg_I){
-      k_res <- data.frame(rbind(round(UNHIDEM_res[k,-c(5:8,12)],3),round(LASSO_res[k,],3),
+      k_res <- data.frame(rbind(round(PROBE_res[k,-c(5:8,12)],3),round(LASSO_res[k,],3),
                                 round(adap_LASSO_res[k,],3),round(SCAD_res[k,],3),
                                 round(MCP_res[k,],3),round(SSLASSO_res[k,],3),
                                 round(varbvs_res[k,],3),round(sparsevb_res[k,],3),
-                                round(sparsevb_c_res[k,],3),round(ebreg_res[k,-8],3)))
-      colnames(k_res)[1:2] <- c("Total_Beta", "Correct_Beta")
-      rownames(k_res) <- c("UNHIDEM","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
-                           "VARBVS","SPARSEVB", "SPARSEVB_c","EBREG")}
+                                round(ebreg_res[k,-8],3)))
+      colnames(k_res)[1:2] <- c("Sum_gamma", "Sum_correct_gamma")
+      rownames(k_res) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
+                           "VARBVS","SPARSEVB","EBREG")}
     if(!ebreg_I){
-      k_res <- data.frame(rbind(round(UNHIDEM_res[k,-c(5:8,12)],3),round(LASSO_res[k,],3),
+      k_res <- data.frame(rbind(round(PROBE_res[k,-c(5:8,12)],3),round(LASSO_res[k,],3),
                                 round(adap_LASSO_res[k,],3),round(SCAD_res[k,],3),
                                 round(MCP_res[k,],3),round(SSLASSO_res[k,],3),
-                                round(varbvs_res[k,],3),round(sparsevb_res[k,],3),
-                                round(sparsevb_c_res[k,],3)))
-      colnames(k_res)[1:2] <- c("Total_Beta", "Correct_Beta")
-      rownames(k_res) <- c("UNHIDEM","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
-                           "VARBVS","SPARSEVB", "SPARSEVB_c")}
+                                round(varbvs_res[k,],3),round(sparsevb_res[k,],3)))
+      colnames(k_res)[1:2] <- c("Sum_gamma", "Sum_correct_gamma")
+      rownames(k_res) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
+                           "VARBVS","SPARSEVB")}
     
     cat("Iteration",k,"finished.\n")
     
     if(verbose){
-      print(round(UNHIDEM_res[k,c(5:8)],3))
+      print(round(PROBE_res[k,c(5:8)],3))
       if(ebreg_I){print(round(ebreg_res[k,8],3))}
       print(k_res)
     }
   }
   
-  full_res <-   cbind(UNHIDEM_res, LASSO_res, adap_LASSO_res, SCAD_res, 
+  full_res <-   cbind(PROBE_res, LASSO_res, adap_LASSO_res, SCAD_res, 
                       MCP_res, SSLASSO_res, varbvs_res, sparsevb_res, 
-                      sparsevb_c_res, ebreg_res, M, M1, eta, sigma, sig_nois)
+                      ebreg_res, M, M1, eta, sigma, sig_nois)
   
   write.csv(full_res,filname)
   
@@ -391,22 +390,24 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
   MAD_comb <- full_res[,grepl('MAD', colnames(full_res))]
   beta_comb <- full_res[,grepl('Beta', colnames(full_res))]
   ECP_res <- full_res[,grepl('ECP', colnames(full_res))]
+  time_res <- full_res[,grepl('time', colnames(full_res))]
   cat("\n Summarizing some results:\n")
   
   cat("\n Train MSE, Test MSE and MAD of predictions of the true expectation,\n along with MSE of beta estimates:\n")
   avg_mse <- apply(MSE_comb,2,mean) ## 
   med_mad <- apply(MAD_comb,2,median) ### 
+  avg_time <- apply(time_res,2,mean) ### 
   avg_b_err <- apply(beta_comb,2,mean) 
   mse_mat <- matrix(avg_mse,nrow = length(avg_mse)/2, ncol = 2, byrow = TRUE)
   colnames(mse_mat) <- c("Train_MSE", "Test_MSE")
   if(ebreg_I){
-    row.names(mse_mat) <- c("UNHIDEM","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
-                            "VARBVS","SPARSEVB", "SPARSEVB_c","EBREG")}
+    row.names(mse_mat) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
+                            "VARBVS","SPARSEVB", "EBREG")}
   if(!ebreg_I){
-    rownames(mse_mat) <- c("UNHIDEM","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
-                           "VARBVS","SPARSEVB", "SPARSEVB_c")
+    rownames(mse_mat) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
+                           "VARBVS","SPARSEVB")
   }
-  pred_mat <- data.frame(mse_mat, MAD = med_mad, Beta_MSE = avg_b_err)
+  pred_mat <- data.frame(mse_mat, MAD = med_mad, Beta_MSE = avg_b_err, Avg_time = avg_time)
   print(pred_mat)
   
   cat("\n Average empirical coverage probabilities of 95% CI's and PI's:\n")
