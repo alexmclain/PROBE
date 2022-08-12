@@ -410,7 +410,7 @@ report_func <- function(count, E_step, MTR_res, Xt_conv1, signal_track,
     if (!is.null(report_pred)) {
       report_pred <- signif(report_pred, 2)
       cat("Iteration=", count, "Number of discoveries (using lfdr)=", 
-          disc, "Sum(delta)=", round(sum(E_step$delta), 1), " MSE(test)=", 
+          disc, "Sum(delta)=", round(sum(E_step$delta), 1), " MSPE(test)=", 
           report_pred, "Convergence Crit=", CC_round, "\n")
     } else {
       cat("Iteration=", count, "Number of discoveries (using lfdr)=", 

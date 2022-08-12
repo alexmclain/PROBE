@@ -13,7 +13,7 @@ predict_probe_func(res, Z, X, alpha, Z_2)
 
 \item{X}{(optional) A matrix or dataframe of predictors not subjected to the sparsity assumption to account for.}
 
-\item{alpha}{Type I error; significance level}
+\item{alpha}{Significance level for \eqn{(1-\alpha)*100\%} credible, and prediction intervals.}
 
 \item{Z_2}{(optional) Square of Z matrix.}
 }

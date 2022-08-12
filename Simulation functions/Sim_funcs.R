@@ -42,7 +42,7 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
   sig_var <- var(eta_i)
   
   sigma <- (sig_var/sig_nois)^(0.5)
-  
+  cat("sigma2 =", round(sigma^2,1),"\n")
   
   
   PROBE_res <- matrix(0,K,13)
@@ -90,7 +90,7 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
                          "MCP_Obs_test_MSPE", "MCP_test_MSE", "MCP_Beta_err", "MCP_time")
   
   if(!ebreg_I){ebreg_res <- NULL}
-  start <- 1000*(args-1)
+  start <- 1000*(args-1) + 3543
   ## Set convergence criteria
   maxit <- 1500
   ep <- 0.1
@@ -135,13 +135,12 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
     eta_test <- apply(t(Z_test)*c(eta_vec),2,sum)
     Y_test <- eta_test + rnorm(N,0,sigma)
     
-    test3 <- system.time(mod.out <- probe(Y = Y, Z = Z, alpha = alpha, eta_i = eta_i, 
-                                            signal = signal))
+    test3 <- system.time(mod.out <- probe(Y = Y, Z = Z))
     
     alpha_est <- mod.out$Calb_mod$coef[2]
     gamma_est <- mod.out$E_step$delta
     beta_est <- mod.out$beta_hat
-    beta_ast_est <- gamma_est*alpha_est*beta_est
+    beta_ast_est <- mod.out$beta_ast_hat
     sigma2_est_new <- mod.out$Calb_mod$sigma2_est
     Y_pred <- mod.out$Calb_mod$Y_pred
     
@@ -163,12 +162,8 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
     
     
     #### LASSO
-    test3 <- system.time(cv.out <- cv.glmnet(Z,Y,alpha = 1,nfolds = 10,lambda.min.ratio=0.001))
-    while(cv.out$lambda.min==min(cv.out$lambda)){
-      ### Further decreasing the lambda if the smallest lambda was the best.
-      cv.out <- cv.glmnet(Z,Y,alpha = 1,nfolds = 10,lambda=exp(c(log(cv.out$lambda.1se),seq(log(min(cv.out$lambda)),log(min(cv.out$lambda)*0.001),length.out = 100))))
-    }
-    
+    test3 <- system.time(cv.out <- lasso(Y,Z))
+
     lasso_coefs <- coef(cv.out,s="lambda.min")[-1]
     lasso_pred  <- predict(cv.out,newx = Z,s="lambda.min")
     lasso_mse <- mean((lasso_pred - eta_i)^2)
@@ -283,7 +278,8 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
       test3 <- system.time(t1 <- try(out.ebreg <- ebreg( Y, Z, rbind(Z,Z_test), standardized = FALSE, 
                                                          alpha = 0.99, prior = TRUE, M = 2000, 
                                                          log.f = log.f, sample.beta = TRUE, 
-                                                         pred = TRUE, conf.level = 0.95), silent = TRUE))
+                                                         pred = TRUE, conf.level = 0.95), 
+                                     silent = TRUE))
       
       if(is.null(attr(t1,"class"))){
         
@@ -358,7 +354,7 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
                                 round(MCP_res[k,],3),round(SSLASSO_res[k,],3),
                                 round(varbvs_res[k,],3),round(sparsevb_res[k,],3),
                                 round(ebreg_res[k,-8],3)))
-      colnames(k_res)[1:2] <- c("Sum_gamma", "Sum_correct_gamma")
+      colnames(k_res)[c(1:2,8)] <- c("Sum_gamma", "Sum_correct_gamma", "Time(sec)")
       rownames(k_res) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
                            "VARBVS","SPARSEVB","EBREG")}
     if(!ebreg_I){
@@ -366,7 +362,7 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
                                 round(adap_LASSO_res[k,],3),round(SCAD_res[k,],3),
                                 round(MCP_res[k,],3),round(SSLASSO_res[k,],3),
                                 round(varbvs_res[k,],3),round(sparsevb_res[k,],3)))
-      colnames(k_res)[1:2] <- c("Sum_gamma", "Sum_correct_gamma")
+      colnames(k_res)[c(1:2,8)] <- c("Sum_gamma", "Sum_correct_gamma", "Time(sec)")
       rownames(k_res) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
                            "VARBVS","SPARSEVB")}
     
@@ -387,17 +383,19 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
   
   
   MSE_comb <- full_res[,grepl('MSE', colnames(full_res))]
+  MSPE_comb <- full_res[,grepl('MSPE', colnames(full_res))]
   MAD_comb <- full_res[,grepl('MAD', colnames(full_res))]
   beta_comb <- full_res[,grepl('Beta', colnames(full_res))]
   ECP_res <- full_res[,grepl('ECP', colnames(full_res))]
   time_res <- full_res[,grepl('time', colnames(full_res))]
   cat("\n Summarizing some results:\n")
   
-  cat("\n Train MSE, Test MSE and MAD of predictions of the true expectation,\n along with MSE of beta estimates:\n")
   avg_mse <- apply(MSE_comb,2,mean) ## 
+  avg_mspe <- apply(MSPE_comb,2,mean) ## 
   med_mad <- apply(MAD_comb,2,median) ### 
   avg_time <- apply(time_res,2,mean) ### 
   avg_b_err <- apply(beta_comb,2,mean) 
+  avg_sig_probe <- mean(full_res[,grepl('Sigma2_est', colnames(full_res))])
   mse_mat <- matrix(avg_mse,nrow = length(avg_mse)/2, ncol = 2, byrow = TRUE)
   colnames(mse_mat) <- c("Train_MSE", "Test_MSE")
   if(ebreg_I){
@@ -407,7 +405,14 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
     rownames(mse_mat) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
                            "VARBVS","SPARSEVB")
   }
-  pred_mat <- data.frame(mse_mat, MAD = med_mad, Beta_MSE = avg_b_err, Avg_time = avg_time)
+  sig_dig <- ceiling(c(-log10(min(mse_mat)), -log10(min(avg_mspe)), -log(min(med_mad)), 
+               -log10(min(avg_b_err)), -log10(min(avg_time)) ))+1
+  sig_dig[sig_dig<1] <- 1
+  pred_mat <- data.frame( round(mse_mat, sig_dig[1]), Test_MSPE = round(avg_mspe, sig_dig[2]), 
+                          MAD = round(med_mad, sig_dig[3]), Beta_MSE = round(avg_b_err, sig_dig[4]), 
+                          Avg_time = round(avg_time, sig_dig[5]))
+  
+  cat("\n PROBE average estimated sigma2:",round(avg_sig_probe,1),"\n")
   print(pred_mat)
   
   cat("\n Average empirical coverage probabilities of 95% CI's and PI's:\n")
@@ -449,6 +454,15 @@ sim_bin_LR_2 <- function(lat_data, err_sd, x, N, M, M1, sig_sp, lat_sp, eta_var,
   return(list(LP_data=LP_data,Z=Z, Z_cont = Z_cont,RE_eff=RE_eff,eta = t_eta,signal=signal,sig_ind=sig_ind))
 }
 
+
+lasso <- function(Y,Z){
+  cv.out <- cv.glmnet(Z,Y,alpha = 1,nfolds = 10,lambda.min.ratio=0.001)
+  while(cv.out$lambda.min==min(cv.out$lambda)){
+    ### Further decreasing the lambda if the smallest lambda was the best.
+    cv.out <- cv.glmnet(Z,Y,alpha = 1,nfolds = 10,lambda=exp(c(log(cv.out$lambda.1se),seq(log(min(cv.out$lambda)),log(min(cv.out$lambda)*0.001),length.out = 100))))
+  }
+  cv.out
+}
 
 adap_lasso <- function(Y,Z){
   ridge1_cv <- cv.glmnet(Z, Y, alpha = 0, nfolds = 10)

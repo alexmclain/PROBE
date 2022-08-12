@@ -7,8 +7,9 @@
 ### simulation_func. In the paper, all methods were ran for 1000 iterations except
 ### ebreg, which was ran for 100 iterations. Also, ebreg was not ran for M=400 due 
 ### to the program frequently returning an error in those settings.
-### simulation_func will automatically create a csv file with the results, but will 
-### also return all of the results.
+### simulation_func will automatically create a csv file with the full results which
+### will also be return. Additionally, the function will summarized results by
+### iteration (if verbose=TRUE, the default) and for all iterations.
 ### The methods use are:
 ###   + PROBE
 ###   + Penalization methods: 
@@ -39,10 +40,10 @@ library(dplyr)
 parlist <- as.matrix(data.frame(read.csv("Simulation functions/arg_list.csv",header = FALSE, fileEncoding="UTF-8-BOM")))
 colnames(parlist) <- c("sqrt M", "pi", "eta", "SNR", "Start")
 
-
+ 
 
 ### Run for continuous with M=400 for B=10 iterations without ebreg
-par_num <- 5 
+par_num <- 3 
 parlist[par_num,]
 sim1 <- simulation_func(par_num, parlist, B = 10, bin = FALSE, ebreg_I = FALSE)
 
@@ -52,7 +53,7 @@ parlist[par_num,]
 sim2 <- simulation_func(par_num, parlist, B = 10, bin = TRUE, ebreg_I = FALSE)
 
 ### Run for continuous with M=10000 for B=10 iterations without ebreg.
-par_num <- 47 
+par_num <- 45 
 parlist[par_num,]
 sim3 <- simulation_func(par_num, parlist, B = 10, bin = FALSE, ebreg_I = FALSE)
 
