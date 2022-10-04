@@ -35,7 +35,7 @@ m_step_regression <- function(Y, W, W2, X, a = -3/2, Int = TRUE) {
       Y_pred <- Wmat %*% beta_w
       hat <- diag(Wmat %*% WWpr_inv %*% t(Wmat))
       resid <- (Y - Y_pred)
-      RSS <- sum(resid^2)
+      RSS <- sum(resid^2) + beta_w[W_col]^2*(sum(W2) - sum(W^2))
       SST <- sum((Y - mean(Y))^2)
       R_squared <- 1 - RSS/SST
       VCV <- RSS/(df) * t(WWpr_inv) %*% (t(Wmat) %*% Wmat) %*% WWpr_inv

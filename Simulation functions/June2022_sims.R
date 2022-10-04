@@ -38,26 +38,30 @@ library(ncvreg)
 library(dplyr)
 
 parlist <- as.matrix(data.frame(read.csv("Simulation functions/arg_list.csv",header = FALSE, fileEncoding="UTF-8-BOM")))
-colnames(parlist) <- c("sqrt M", "pi", "eta", "SNR", "Start")
+colnames(parlist) <- c("sqrt M", "pi", "eta", "SNR")
 
  
 
-### Run for continuous with M=400 for B=10 iterations without ebreg
-par_num <- 3 
+### Run for binary predictors with M=400 for B=10 iterations without ebreg
+par_num <- 13
 parlist[par_num,]
-sim1 <- simulation_func(par_num, parlist, B = 10, bin = FALSE, ebreg_I = FALSE)
+args_list <- parlist[par_num,]
+sim1 <- simulation_func(args_list, B = 10, bin = TRUE, ebreg_I = FALSE)
 
-### Run for binary with M=2500 for B=10 iterations without ebreg
+### Run for continuous predictors with M=2500 for B=5 iterations without ebreg
 par_num <- 30 
 parlist[par_num,]
-sim2 <- simulation_func(par_num, parlist, B = 10, bin = TRUE, ebreg_I = FALSE)
+args_list <- parlist[par_num,]
+sim1 <- simulation_func(args_list, B = 5, bin = FALSE, ebreg_I = FALSE)
 
-### Run for continuous with M=10000 for B=10 iterations without ebreg.
-par_num <- 45 
+### Run for continuous predictors with M=10000 for B=5 iterations without ebreg.
+par_num <- 48 
 parlist[par_num,]
-sim3 <- simulation_func(par_num, parlist, B = 10, bin = FALSE, ebreg_I = FALSE)
+args_list <- parlist[par_num,]
+sim1 <- simulation_func(args_list, B = 5, bin = FALSE, ebreg_I = FALSE)
 
-### Run for binary with M=2500 for B=3 iterations with ebreg
-par_num <- 28 
+### Run for binary predictors with M=2500 for B=3 iterations with ebreg
+par_num <- 23 
 parlist[par_num,]
-sim4 <- simulation_func(par_num, parlist, B = 3, bin = FALSE, ebreg_I = TRUE)
+args_list <- parlist[par_num,]
+sim1 <- simulation_func(args_list, B = 3, bin = TRUE, ebreg_I = TRUE)

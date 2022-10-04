@@ -28,6 +28,14 @@ predict_probe_func <- function(res, Z, X = NULL, alpha = 0.05,
   E_step <- res$E_step
   mod <- res$Calb_mod
   sigma2_est <- res$Calb_mod$sigma2_est
+  if (!is.matrix(Z)){
+    if(is.null(dim(Z))){
+      Z <- matrix(Z,1,ncol = length(Z))
+    }else{
+      Z <- as.matrix(Z)
+    }
+    Z_2 <- NULL
+  }
   if (is.null(Z_2)) Z_2 <- Z * Z
   
   W_W2_update <- m_update_func(Z, Z_2, E_step$beta_tilde, E_step$delta, E_step$beta_tilde_var)

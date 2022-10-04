@@ -3,8 +3,7 @@ library(RandomFields)
 
 
 
-simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
-  args_list <- as.numeric(unlist(parlist[args,]))
+simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 1641){
   
   NUM <- as.numeric(args_list[1])
   x <- seq(1, NUM, 1)
@@ -28,7 +27,7 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
   data <- sim_bin_LR_2(lat_data,err_sd, x, 1,M,M1,sig_sp,lat_sp,eta_var,seed = 238476 )
   data <- sim_bin_LR_2(lat_data,err_sd, x, 10000,M,M1,sig_sp,lat_sp,eta_var,seed = 238476 )
   #Signal and beta coefficients
-  set.seed(args)
+  set.seed(seed)
   signal <- data$signal
   sig_ind <- data$sig_ind
   t_eta <-  runif(M, 0, 2*eta)# data$eta#
@@ -90,7 +89,6 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
                          "MCP_Obs_test_MSPE", "MCP_test_MSE", "MCP_Beta_err", "MCP_time")
   
   if(!ebreg_I){ebreg_res <- NULL}
-  start <- 1000*(args-1) + 3543
   ## Set convergence criteria
   maxit <- 1500
   ep <- 0.1
@@ -104,8 +102,9 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
   for(k in 1:K){
     
     # Generate Z and Signal Data
-    set.seed(start + k)
-    data <- sim_bin_LR_2(lat_data,err_sd,x,N,M,M1,sig_sp,lat_sp,eta_var,seed = start + k)
+    
+    set.seed(seed + k)
+    data <- sim_bin_LR_2(lat_data,err_sd,x,N,M,M1,sig_sp,lat_sp,eta_var,seed = seed + k)
     
     #Signal and beta coefficients
     signal <- data$signal
@@ -124,7 +123,7 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
     Y <- eta_i + rnorm(N,0,sigma)
     
     # Generate Test Data
-    set.seed(start + k + 12321)
+    set.seed(seed + k + 12321)
     t_data <- RFsimulate(model = RMstable(alpha = 2, scale = lat_sp,var = 1), x=x, y=x,grid=TRUE,n=N)
     t_datamat <- t(matrix(array(t_data),M,N))+rnorm(N)*err_sd
     if(bin){
@@ -348,6 +347,7 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
       }
     }
     
+    
     if(ebreg_I){
       k_res <- data.frame(rbind(round(PROBE_res[k,-c(5:8,12)],3),round(LASSO_res[k,],3),
                                 round(adap_LASSO_res[k,],3),round(SCAD_res[k,],3),
@@ -407,12 +407,13 @@ simulation_func <- function(args, parlist, B, bin, ebreg_I, verbose = TRUE){
   }
   sig_dig <- ceiling(c(-log10(min(mse_mat)), -log10(min(avg_mspe)), -log(min(med_mad)), 
                -log10(min(avg_b_err)), -log10(min(avg_time)) ))+1
+  sig_dig[1:2] <- sig_dig[1:2] +1
   sig_dig[sig_dig<1] <- 1
   pred_mat <- data.frame( round(mse_mat, sig_dig[1]), Test_MSPE = round(avg_mspe, sig_dig[2]), 
                           MAD = round(med_mad, sig_dig[3]), Beta_MSE = round(avg_b_err, sig_dig[4]), 
                           Avg_time = round(avg_time, sig_dig[5]))
   
-  cat("\n PROBE average estimated sigma2:",round(avg_sig_probe,1),"\n")
+  cat("\n PROBE average estimated sigma2:",round(avg_sig_probe,2),"\n")
   print(pred_mat)
   
   cat("\n Average empirical coverage probabilities of 95% CI's and PI's:\n")
