@@ -4,17 +4,16 @@
 \alias{probe}
 \title{Fitting PaRtitiOned empirical Bayes Ecm (PROBE) algorithm to sparse high-dimensional linear models.}
 \usage{
-probe(Y, Z, X, alpha, ep, maxit, Y_test, Z_test, X_test, verbose, 
-signal, eta_i, plot_ind)
+probe(Y, X, Z = NULL, ep = 0.1, maxit = 10000, Y_test = NULL, X_test = NULL, 
+Z_test = NULL, verbose = FALSE, signal = NULL, eta_i = NULL, alpha = 0.05, 
+plot_ind = FALSE, adj = 5)
 }
 \arguments{
 \item{Y}{The outcome variable.}
 
-\item{Z}{An \code{n x M} matrix of sparse predictors variables.}
+\item{X}{An \code{n x M} matrix of sparse predictors variables.}
 
-\item{X}{(optional) An \code{n x p} matrix or dataframe of other predictors not subjected to the sparsity assumption.}
-
-\item{alpha}{Type I error; significance level}
+\item{Z}{(optional) An \code{n x p} matrix or dataframe of other predictors not subjected to the sparsity assumption.}
 
 \item{ep}{Value against which to compare convergence criterion (default = 0.1).}
 
@@ -22,9 +21,9 @@ signal, eta_i, plot_ind)
 
 \item{Y_test}{(optional) Test Y data used plotting purposes only (doesn't impact results).}
 
-\item{Z_test}{(optional) Test Z data used plotting purposes only (doesn't impact results).}
-
 \item{X_test}{(optional) Test X data used plotting purposes only (doesn't impact results).}
+
+\item{Z_test}{(optional) Test Z data used plotting purposes only (doesn't impact results).}
 
 \item{verbose}{A logical (true/false) value whether to print algorithm iteration progress and summary quantities (default = FALSE).}
 
@@ -32,7 +31,11 @@ signal, eta_i, plot_ind)
 
 \item{eta_i}{(optional) A vector of the true signal. This is used to calculate the MSE by iteration for simulated data. Used plotting purposes only (doesn't impact results).}
 
+\item{alpha}{(optional) significance level}
+
 \item{plot_ind}{A logical values (True/False) for whether to output plots on algorithm results and progress (default = FALSE)}
+
+\item{adj}{Bandwidth parameter for empirical Bayes E-step. The bandwidth will be equal to \code{adj} times Silverman's 'rule of thumb' (default = 2).}
 }
 \value{
 A list including 
@@ -60,35 +63,39 @@ data(Sim_data)
 attach(Sim_data)
 alpha <- 0.05
 plot_ind <- TRUE
+adj <- 10
 
-# Run the analysis. Y_test and Z_test are included for plotting purposes only
-full_res <- probe( Y = Y, Z = Z, alpha = alpha, Y_test = Y_test, 
-Z_test = Z_test, plot_ind = plot_ind)
+# Run the analysis. Y_test and X_test are included for plotting purposes only
+full_res <- probe( Y = Y, X = X, Y_test = Y_test, 
+X_test = X_test, alpha = alpha, plot_ind = plot_ind, adj = adj)
 
 # Predicting for test data
-pred_res <- predict_probe_func(full_res, Z = Z_test, alpha = alpha)
+pred_res <- predict_probe_func(full_res, X = X_test, alpha = alpha)
 head(pred_res)
 
 # Estimate of the residual variance
 full_res$sigma2_est
 
-### Example with additional covariate data X (not subjected to the sparsity assumption)
+### Example with additional covariate data Z (not subjected to the sparsity assumption)
 data(Sim_data_cov)
 attach(Sim_data_cov)
 
-# Calculating the true signal (the impact of Z only)
-eta_i <- apply(t(Z)*beta_tr,2,sum) 
+# Calculating the true signal (the impact of X only)
+eta_i <- apply(t(X)*beta_tr,2,sum) 
 # Run the analysis. eta_i (true signal) and signal are included for plotting purposes only.
-full_res <- probe( Y = Y, Z = Z, X = X, alpha = alpha, 
-signal = signal, eta_i  = eta_i, plot_ind = plot_ind)
+full_res <- probe( Y = Y, X = X, Z = Z, signal = signal, 
+eta_i  = eta_i, alpha = alpha, plot_ind = plot_ind, adj = adj)
 
 # Final estimates of the impact of X versus the true values:
 data.frame(true_values = beta_X_tr, full_res$Calb_mod$res_data[-2,])
 
 #Compare to a standard linear model of X on Y:
-summary(lm(Y~X$Cont_cov + X$Binary_cov))$coefficients
+summary(lm(Y~Z$Cont_cov + Z$Binary_cov))$coefficients
 
 
+}
+\references{
+McLain, A. C., Zgodic, A., & Bondell, H. (2022). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. arXiv preprint arXiv:2209.08139..
 }
 \seealso{
 predict_probe_func to obtain predictions, credible intervals and prediction intervals from PROBE.

@@ -4,7 +4,7 @@
 \alias{e_step_func}
 \title{Function for fitting the empirical Bayes portion of the E-step}
 \usage{
-e_step_func(beta_t, beta_var, df, adj = 3, lambda = 0.1, monotone = TRUE)
+e_step_func(beta_t, beta_var, df, adj = 5, lambda = 0.1, monotone = TRUE)
 }
 \arguments{
 \item{beta_t}{Expectation of the posterior mean (assuming \eqn{\gamma=1})}
@@ -13,9 +13,9 @@ e_step_func(beta_t, beta_var, df, adj = 3, lambda = 0.1, monotone = TRUE)
 
 \item{df}{Degrees of freedom for the t-distribution (use to calculate p-values).}
 
-\item{adj}{bandwidth multiplier to Silverman's `rule of thumb' for calculating the marginal density of the test-statistics (default = 3).}
+\item{adj}{Bandwidth multiplier to Silverman's `rule of thumb' for calculating the marginal density of the test-statistics (default = 5).}
 
-\item{lambda}{value of the \eqn{\lambda} parameter for estimating the proportion of null hypothesis using Storey et al. (2004) (default = 0.1).}
+\item{lambda}{Value of the \eqn{\lambda} parameter for estimating the proportion of null hypothesis using Storey et al. (2004) (default = 0.1).}
 
 \item{monotone}{Logical - Should the estimated marginal density of the test-statistics be monotone non-increasing from zero (default = TRUE).}
 }
@@ -31,5 +31,9 @@ A wrapper function estimating posterior expectations of the \eqn{\gamma} variabl
 }
 \examples{
 #not run
-#mod <- e_step_func(beta_t, beta_var, df, adj = 3, lambda = 0.1, monotone = TRUE)
+#mod <- e_step_func(beta_t, beta_var, df, adj = 5, lambda = 0.1, monotone = TRUE)
+}
+\references{
+Storey, J. D., Taylor, J. E., and Siegmund, D. (2004), “Strong control, conservative point estimation and simultaneous conservative consistency of false discovery rates: A unified approach,” J. R. Stat. Soc. Ser. B. Stat. Methodol., 66, 187–205.
+McLain, A. C., Zgodic, A., & Bondell, H. (2022). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. arXiv preprint arXiv:2209.08139.
 }

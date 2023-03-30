@@ -82,7 +82,7 @@ for(i in 1:ncol(y_data)) {
                              Y_test < pred_res_test$PI_U) )
     t_len <- c( t_len, pred_res_test$PI_U - pred_res_test$PI_L)
     
-    
+    if(FALSE){
     #MCP AND SCAD SECTION
     cat("MCP-SCAD, ")
     X <- Z
@@ -175,7 +175,17 @@ for(i in 1:ncol(y_data)) {
     
     mspe[j,i,9] <- mean( (Y_test - yhat_sparsevb)^2 )
     mad[j,i,9] <- median( abs(Y_test - yhat_sparsevb) )
+    }
     
+    yhat_mcp <- yhat_unhidem
+    yhat_scad <- yhat_unhidem
+    yhat_lasso <- yhat_unhidem
+    yhat_alasso <- yhat_unhidem
+    yhat_lasso_conf <- yhat_unhidem
+    yhat_varbvs <- yhat_unhidem
+    yhat_sslasso <- yhat_unhidem
+    yhat_sparsevb <- yhat_unhidem
+     
     #Gather all of the predicted values
     t_pred_data <- rbind( t_pred_data, cbind(yhat_unhidem, yhat_mcp, 
                                              yhat_scad, yhat_lasso, yhat_alasso, 
@@ -198,6 +208,6 @@ results <- list("pred_data" = data.frame(pred_data), "test_data" =
                 "PI_len" =data.frame(PI_len), "mspe" = data.frame(mspe), 
                 "mad" = data.frame(mad))
 
-saveRDS(results,"Drug_results.rds")
+saveRDS(results,"Drug_results_W2.rds")
 
 

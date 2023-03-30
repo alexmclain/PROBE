@@ -4,21 +4,21 @@
 \alias{predict_probe_func}
 \title{Obtaining predictions, confidence intervals and prediction intervals from probe}
 \usage{
-predict_probe_func(res, Z, X, alpha, Z_2)
+predict_probe_func(res, X, Z = NULL, alpha = 0.05, X_2 = NULL)
 }
 \arguments{
 \item{res}{The results from the probe function.}
 
-\item{Z}{A matrix containing the predictors on which to apply the probe algorithm}
+\item{X}{A matrix containing the predictors on which to apply the probe algorithm}
 
-\item{X}{(optional) A matrix or dataframe of predictors not subjected to the sparsity assumption to account for.}
+\item{Z}{(optional) A matrix or dataframe of predictors not subjected to the sparsity assumption to account for.}
 
-\item{alpha}{Significance level for \eqn{(1-\alpha)*100\%} credible, and prediction intervals.}
+\item{alpha}{significance level for (\eqn{100(1-\alpha)\%}) credible and prediction intervals.}
 
-\item{Z_2}{(optional) Square of Z matrix.}
+\item{X_2}{(optional) Square of X matrix.}
 }
 \value{
-A dataframe with predictions, confidence intervals, and prediction intervals for each new observation.
+A dataframe with predictions, credible intervals, and prediction intervals for each new observation.
 }
 \description{
 A function providing predictions, along with \eqn{(1-\alpha)*100\%} credible, and prediction intervals for new observations.
@@ -29,12 +29,17 @@ data(Sim_data)
 attach(Sim_data)
 alpha <- 0.05
 plot_ind <- TRUE
+adj <- 10
 
-# Run the analysis. Y_test and Z_test are included for plotting purposes only
-full_res <- probe( Y = Y, Z = Z, alpha = alpha, plot_ind = plot_ind, Y_test = Y_test, Z_test = Z_test)
+# Run the analysis. Y_test and X_test are included for plotting purposes only
+full_res <- probe( Y = Y, X = X, alpha = alpha, plot_ind = plot_ind, 
+Y_test = Y_test, X_test = X_test, adj = adj)
 
 # Predicting for test data
-pred_res <- predict_probe_func(full_res, Z = Z_test, X = NULL, alpha = alpha)
+pred_res <- predict_probe_func(full_res, X = X_test, Z = NULL, alpha = alpha)
 head(pred_res)
 
+}
+\references{
+McLain, A. C., Zgodic, A., & Bondell, H. (2022). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. arXiv preprint arXiv:2209.08139.
 }

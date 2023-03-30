@@ -5,10 +5,10 @@ Version: 1.0
 Date: 2022-08-31
 Author: Alex McLain
 Maintainer: Anja Zgodic <azgodic@email.sc.edu>
-Description: This package contains functions to fit an efficient and powerful Bayesian approach for sparse high-dimensional linear regression. Unlike previous approaches, our model formulation is focused on maximum a posteriori probability (MAP) estimation of the prior mean of the regression coefficients which have a traditional spike-and-slab form. Minimal prior assumptions on the parameters are required through the use of plug-in empirical Bayes estimates of hyperparameters. Efficient estimation is completed through the use of a partitioned and extended expectation conditional maximization (ECM) algorithm. The result is a PaRtitiOned empirical Bayes Ecm (PROBE) algorithm applied to sparse high-dimensional linear regression. We give functions to estimate credible and prediction intervals for predictions of future values.
+Description: This package contains functions to fit an efficient and powerful Bayesian approach for sparse high-dimensional linear regression. Unlike previous approaches, our model formulation is focused on maximum a posteriori (MAP) estimation of the regression coefficients with minimal prior assumptions on the parameters. Plug-in empirical Bayes estimates of all hyperparameters are used. Efficient estimation is completed through the use of a partitioned and extended expectation conditional maximization (ECM) algorithm which is similar to a combination of an Estimation Conditional Maximization (ECM) and a parameter expanded (PX) EM algorithm. The result is a PaRtitiOned empirical Bayes Ecm (PROBE) algorithm applied to sparse high-dimensional linear regression. We give functions to estimate credible and prediction intervals for predictions of future values.
 License: GPL (>= 2)
 Encoding: UTF-8
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1
 Imports: Rcpp (>= 1.0.6)
 LinkingTo: Rcpp, RcppArmadillo
 NeedsCompilation: yes

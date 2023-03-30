@@ -4,7 +4,7 @@
 \alias{m_step_regression}
 \title{Function for fitting the initial part of the M-step}
 \usage{
-m_step_regression(Y, W, W2, X, a = -3/2, Int = TRUE)
+m_step_regression(Y, W, W2, Z, a = -3/2, Int = TRUE)
 }
 \arguments{
 \item{Y}{A matrix containing the outcome \code{Y}}
@@ -13,7 +13,7 @@ m_step_regression(Y, W, W2, X, a = -3/2, Int = TRUE)
 
 \item{W2}{Quantity \eqn{E(W^2_0)} as outlined in citation, output from W_update_fun}
 
-\item{X}{A matrix or dataframe of other predictors to account for}
+\item{Z}{A matrix or dataframe of other predictors to account for}
 
 \item{a}{(optional) parameter for changing the hyperparameter \eqn{a} (default, \eqn{a=-3/2} uses \eqn{n-2} as denominator for MAP of \eqn{\sigma^2})}
 
@@ -32,5 +32,8 @@ A wrapper function providing the quantities related to the M-step for \eqn{\alph
 }
 \examples{
 #not run
-#mod <- m_step_regression(Y, W_ast, W_ast_var + W_ast^2, X)
+#mod <- m_step_regression(Y, W_ast, W_ast_var + W_ast^2, Z)
+}
+\references{
+McLain, A. C., Zgodic, A., & Bondell, H. (2022). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. arXiv preprint arXiv:2209.08139.
 }

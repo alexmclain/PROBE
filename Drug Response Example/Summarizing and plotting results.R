@@ -9,29 +9,14 @@ y_data <- y_data[, colSums(apply(y_data, 2, is.na))==0]
 nfolds <- 10
 
 # Reading in the results
-results <- readRDS("Drug_results.rds")
+results <- readRDS("Drug_results_full.rds")
+
 mspe <- array(unlist(results$mspe), dim = c(nfolds, ncol(y_data), 9))
 mad <- array(unlist(results$mad), dim = c(nfolds, ncol(y_data), 9))
 pred_data <- array(unlist(results$pred_data), dim = c(nrow(y_data), ncol(y_data), 9)) 
 LR_test <- unlist(results$lr_test)
-
-# Loading in and combining jackknife conformal inference and 
-# EBreg results (ran separately due to its computational demand).
-conf_jack_w_cv <- readRDS("Conform_lasso_jack.rds")
-EBreg_unit <- readRDS("EBreg_unif.rds")
-
-ecp =  PI_len  <- array(numeric(), dim = c(nrow(y_data), ncol(y_data), 4))
-ecp[,,1:2] <- as.matrix(results$ecp)
-PI_len[,,1:2] <- as.matrix(results$PI_len[,,1:2])
-ecp[,,3] <- as.matrix(conf_jack_w_cv$ecp)
-PI_len[,,3] <- as.matrix(conf_jack_w_cv$PI_Length)
-ecp[,,4] <- as.matrix(EBreg_unit$ecp)
-PI_len[,,4] <- as.matrix(EBreg_unit$PI_Length)
-
-# Replacing conformal split with EBreg results to simplify (Conformal were similar to LASSO)
-mspe[,,6] <- as.matrix(EBreg_unit$mspe)
-mad[,,6] <- as.matrix(EBreg_unit$mad)
-pred_data[,,6] <- as.matrix(EBreg_unit$Pred)
+ecp <-  array(unlist(results$ecp), dim = c(nrow(y_data), ncol(y_data), 4))
+PI_len  <- array(unlist(results$PI_len), dim = c(nrow(y_data), ncol(y_data), 4))
 
 
 ##### Processing Results #####
@@ -55,16 +40,13 @@ ecp_outcome <- apply(ecp, 3, colMeans, na.rm=T)
 PILen_outcome <- apply(PI_len, 3, colMeans, na.rm=T)
 
 #Mean PI_length by fold
-set.seed(123)
-ind <- sample(1:(nrow(y_data)) %% nfolds)
-ind[ind == 0] <- nfolds
-n_length <- c(table(ind),0)
+fold_num <- results$fold_num
 mean_PI <- array(0, dim = c(ncol(y_data),nfolds,4))
 for(i in 1:8){
   count <- 1
   count2 <- n_length[1]
   for(k in 1:nfolds){
-    mean_PI[i,k,] <- apply( PI_len[count:count2,i,], 2, mean)
+    mean_PI[i,k,] <- apply( PI_len[fold_num == k,i,], 2, mean)
     count <- count2 + 1
     count2 <- count2 + n_length[k+1]
   }
@@ -86,7 +68,7 @@ sheets <- list("MPSE" = data.frame(drugs,mspe_outcome),
                "SD PI Length"= data.frame(drugs, sd_PI_length))
 
 ##### Exporting results to excel file  #####
-write_xlsx(sheets, "Table Results.xlsx")
+write_xlsx(sheets, "Table Results_d.xlsx")
 
 
 ## Best MPSE and MAD
@@ -179,7 +161,7 @@ ggplot(mspe_data, aes(x=Drug, y=MPSE, color = Method)) +
   
   theme(axis.text.x = element_text(angle = 30,hjust=1,vjust=0.98,size=15), axis.text.y=element_text(size=15), axis.title=element_text(size=17)) +
   theme(legend.text=element_text(size=15), legend.title=element_text(size=17) )
-ggsave("Example1_MSPE_nosparsevb.pdf", dpi = 600, width = 15*0.9, height = 6*0.9)
+ggsave("Example1_MSPE_nosparsevb2.pdf", dpi = 600, width = 15*0.9, height = 6*0.9)
 dev.off()
 
 #Plot for MAD
@@ -195,7 +177,7 @@ ggplot(mad_data, aes(x=Drug, y=MAD, color = Method)) +
   scale_shape_manual(values=shape_vals_nosvb) +
   theme(axis.text.x = element_text(angle = 30,hjust=1,vjust=0.98,size=15), axis.text.y=element_text(size=15), axis.title=element_text(size=17)) +
   theme(legend.text=element_text(size=15), legend.title=element_text(size=17) )
-ggsave("Example1_MAD_nosparsevb.pdf", dpi = 600, width = 15*0.9, height = 6*0.9)
+ggsave("Example1_MAD_nosparsevb2.pdf", dpi = 600, width = 15*0.9, height = 6*0.9)
 dev.off()
 
 
@@ -205,7 +187,6 @@ dev.off()
 
 
 ##### Create Plots of PI length by fold #####
-fold_num <- sort(ind)
 
 drugs <- gsub("_ActArea", "", drugs)
 drugs <- gsub("\\.", "-", drugs)

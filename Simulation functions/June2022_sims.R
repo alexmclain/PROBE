@@ -52,7 +52,7 @@ sim1 <- simulation_func(args_list, B = 10, bin = TRUE, ebreg_I = FALSE)
 par_num <- 30 
 parlist[par_num,]
 args_list <- parlist[par_num,]
-sim1 <- simulation_func(args_list, B = 5, bin = FALSE, ebreg_I = FALSE)
+sim1 <- simulation_func(args_list, B = 5, bin = FALSE, ebreg_I = FALSE, verbose = TRUE)
 
 ### Run for continuous predictors with M=10000 for B=5 iterations without ebreg.
 par_num <- 48 
