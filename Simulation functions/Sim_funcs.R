@@ -20,6 +20,7 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
   lat_sp <- 10
   sig_sp <- 20
   lat_data <- 0
+  adj <- 10
   RFoptions(spConform=FALSE)
   
   ### Generating a big dataset to get the variance of the signal. First run is required so
@@ -32,12 +33,12 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
   sig_ind <- data$sig_ind
   t_eta <-  runif(M, 0, 2*eta)# data$eta#
   
-  #Z data
-  if(bin){Z <- matrix(t(data$Z), nrow = N, ncol = M, byrow = TRUE)}else{Z <- data$Z_cont}
+  #X data
+  if(bin){X <- matrix(t(data$X), nrow = N, ncol = M, byrow = TRUE)}else{X <- data$X_cont}
   
   # Generate outcome
   eta_vec <- sig_ind*array(t_eta)
-  eta_i <- apply(t(Z)*c(eta_vec),2,sum)
+  eta_i <- apply(t(X)*c(eta_vec),2,sum)
   sig_var <- var(eta_i)
   
   sigma <- (sig_var/sig_nois)^(0.5)
@@ -101,7 +102,7 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
   
   for(k in 1:K){
     
-    # Generate Z and Signal Data
+    # Generate X and Signal Data
     
     set.seed(seed + k)
     data <- sim_bin_LR_2(lat_data,err_sd,x,N,M,M1,sig_sp,lat_sp,eta_var,seed = seed + k)
@@ -114,12 +115,12 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
     LP_data$signal <- sig_ind
     LP_data$Signal <- factor((LP_data$signal-1))
     
-    #Z data
-    if(bin){Z <- matrix(t(data$Z), nrow = N, ncol = M, byrow = TRUE)}else{Z <- data$Z_cont}
+    #X data
+    if(bin){X <- matrix(t(data$X), nrow = N, ncol = M, byrow = TRUE)}else{X <- data$X_cont}
     
     # Generate outcome
     eta_vec <- sig_ind*array(t_eta)
-    eta_i <- apply(t(Z)*c(eta_vec),2,sum)
+    eta_i <- apply(t(X)*c(eta_vec),2,sum)
     Y <- eta_i + rnorm(N,0,sigma)
     
     # Generate Test Data
@@ -127,24 +128,25 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
     t_data <- RFsimulate(model = RMstable(alpha = 2, scale = lat_sp,var = 1), x=x, y=x,grid=TRUE,n=N)
     t_datamat <- t(matrix(array(t_data),M,N))+rnorm(N)*err_sd
     if(bin){
-      Z_test <- matrix(1*I(t(t(t_datamat)+c(array(lat_data))) < 0), N, M)
+      X_test <- matrix(1*I(t(t(t_datamat)+c(array(lat_data))) < 0), N, M)
     }else{
-      Z_test <- t(t(t_datamat)+c(array(lat_data))) 
+      X_test <- t(t(t_datamat)+c(array(lat_data))) 
     }
-    eta_test <- apply(t(Z_test)*c(eta_vec),2,sum)
+    eta_test <- apply(t(X_test)*c(eta_vec),2,sum)
     Y_test <- eta_test + rnorm(N,0,sigma)
     
-    test3 <- system.time(mod.out <- probe(Y = Y, Z = Z))
+    test3 <- system.time(mod.out <- probe(Y = Y, X = X, 
+                                          adj = adj))
     
     alpha_est <- mod.out$Calb_mod$coef[2]
-    gamma_est <- mod.out$E_step$delta
+    gamma_est <- mod.out$E_step$gamma
     beta_est <- mod.out$beta_hat
     beta_ast_est <- mod.out$beta_ast_hat
     sigma2_est_new <- mod.out$Calb_mod$sigma2_est
     Y_pred <- mod.out$Calb_mod$Y_pred
     
     #Prediction for test data
-    pred_res_test <- predict_probe_func(mod.out, Z_test, X = NULL, alpha = alpha)
+    pred_res_test <- predict_probe_func(mod.out, X_test, Z = NULL, alpha = alpha)
     # Proportion of test PIs that contain the test observation
     ECP_PI <- mean(1*I(Y_test>pred_res_test$PI_L & Y_test<pred_res_test$PI_U))
     # Proportion of test CIs that contain the test true signal
@@ -161,12 +163,12 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
     
     
     #### LASSO
-    test3 <- system.time(cv.out <- lasso(Y,Z))
+    test3 <- system.time(cv.out <- lasso(Y,X))
 
     lasso_coefs <- coef(cv.out,s="lambda.min")[-1]
-    lasso_pred  <- predict(cv.out,newx = Z,s="lambda.min")
+    lasso_pred  <- predict(cv.out,newx = X,s="lambda.min")
     lasso_mse <- mean((lasso_pred - eta_i)^2)
-    lasso_pred_test<- predict(cv.out,newx = Z_test,s="lambda.min")
+    lasso_pred_test<- predict(cv.out,newx = X_test,s="lambda.min")
     lasso_mad <- median(abs(lasso_pred_test - eta_test))
     lasso_mspe     <- mean((lasso_pred_test - Y_test)^2)
     lasso_mse_test <- mean((lasso_pred_test - eta_test)^2)
@@ -178,14 +180,14 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
                        mean((lasso_coefs - eta_vec)^2), test3[3])
     
     #### ADAPTIVE LASSO
-    test3 <- system.time(t1 <- try(cv.out <- adap_lasso(Y,Z), silent = TRUE))
+    test3 <- system.time(t1 <- try(cv.out <- adap_lasso(Y,X), silent = TRUE))
     
     if(!(attr(t1,"class")=="try-error")){
       lasso_coefs <- coef(cv.out,s="lambda.min")[-1]
-      lasso_pred  <- predict(cv.out,newx = Z,s="lambda.min")
+      lasso_pred  <- predict(cv.out,newx = X,s="lambda.min")
       lasso_mse <- mean((lasso_pred - eta_i)^2)
       lasso_mad <- median(abs(lasso_pred - eta_i))
-      lasso_pred_test<- predict(cv.out,newx = Z_test,s="lambda.min")
+      lasso_pred_test<- predict(cv.out,newx = X_test,s="lambda.min")
       lasso_mspe     <- mean((lasso_pred_test - Y_test)^2)
       lasso_mse_test <- mean((lasso_pred_test - eta_test)^2)
       
@@ -196,14 +198,14 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
                               mean((lasso_coefs - eta_vec)^2), test3[3])
     }
     
-    test3 <- system.time(t1 <- try(cv.out2 <- scad_func(Y,Z,N,M), silent = TRUE))
+    test3 <- system.time(t1 <- try(cv.out2 <- scad_func(Y,X,N,M), silent = TRUE))
     
     if(!(attr(t1,"class")=="try-error")){
       scad_coefs <- cv.out2$fit$beta[,cv.out2$min][-1]
-      ash_scad <- predict(cv.out2,matrix(as.numeric(Z),N,M),which = cv.out2$min)
+      ash_scad <- predict(cv.out2,matrix(as.numeric(X),N,M),which = cv.out2$min)
       scad_mse <- mean((ash_scad - eta_i)^2)
       scad_mad <- median(abs(ash_scad - eta_i))
-      ash_scad_test <- predict(cv.out2,matrix(as.numeric(Z_test),N,M),which = cv.out2$min)
+      ash_scad_test <- predict(cv.out2,matrix(as.numeric(X_test),N,M),which = cv.out2$min)
       scad_mspe     <- mean((ash_scad_test - Y_test)^2)
       scad_mse_test <- mean((ash_scad_test - eta_test)^2)
       
@@ -213,13 +215,13 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
                         mean((scad_coefs - eta_vec)^2), test3[3])
     }
     
-    test3 <- system.time(t1 <- try(cv.out3 <- MCP_func(Y,Z,N,M), silent = TRUE))
+    test3 <- system.time(t1 <- try(cv.out3 <- MCP_func(Y,X,N,M), silent = TRUE))
     
     if(!(attr(t1,"class")=="try-error")){
       mcp_coefs <- cv.out3$fit$beta[,cv.out3$min][-1]
-      ash_mcp <- predict(cv.out3,matrix(as.numeric(Z),N,M),which = cv.out3$min)
+      ash_mcp <- predict(cv.out3,matrix(as.numeric(X),N,M),which = cv.out3$min)
       mcp_mse <- mean((ash_mcp - eta_i)^2)
-      ash_mcp_test <- predict(cv.out3,matrix(as.numeric(Z_test),N,M),which = cv.out3$min)
+      ash_mcp_test <- predict(cv.out3,matrix(as.numeric(X_test),N,M),which = cv.out3$min)
       mcp_mspe     <- mean((ash_mcp_test - Y_test)^2)
       mcp_mse_test <- mean((ash_mcp_test - eta_test)^2)
       mcp_mad      <- median(abs(ash_mcp_test - eta_test))
@@ -231,15 +233,15 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
     }
     
     #### varbvs
-    test3 <- system.time(mod.out <- varbvs(X=Z, Z=NULL, y=Y, 
+    test3 <- system.time(mod.out <- varbvs(X=X, Z=NULL, y=Y, 
                                            family = "gaussian", verbose = FALSE))
     ## 
     varbvs_pip   <- mod.out$pip
     varbvs_coefs <- mod.out$beta*varbvs_pip
-    varbvs_pred  <- predict(mod.out,X = Z)
+    varbvs_pred  <- predict(mod.out,X = X)
     varbvs_mse <- mean((varbvs_pred - eta_i)^2)
     varbvs_mad <- median(abs(varbvs_pred - eta_i))
-    varbvs_pred_test<- predict(mod.out,X = Z_test)
+    varbvs_pred_test<- predict(mod.out,X = X_test)
     varbvs_mspe     <- mean((varbvs_pred_test - Y_test)^2)
     varbvs_mse_test <- mean((varbvs_pred_test - eta_test)^2)
     
@@ -250,15 +252,15 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
     
     #### SSLASSO
     L <- 400
-    test3 <- system.time(t1 <- try(mod.out <- SSLASSO(X=Z, y=Y, variance = "unknown", lambda1 = 0.01, 
+    test3 <- system.time(t1 <- try(mod.out <- SSLASSO(X=X, y=Y, variance = "unknown", lambda1 = 0.01, 
                                                       lambda0 = seq(0.01,M,length.out=L), 
                                                       a = M1, b = M-M1), silent = TRUE))
     if(attr(t1,"class") == "SSLASSO"){
       SSLASSO_coefs <- mod.out$beta[,L]
-      SSLASSO_pred  <- Z%*%c(SSLASSO_coefs) + mod.out$intercept[L]
+      SSLASSO_pred  <- X%*%c(SSLASSO_coefs) + mod.out$intercept[L]
       SSLASSO_mse <- mean((SSLASSO_pred - eta_i)^2)
       SSLASSO_mad <- median(abs(SSLASSO_pred - eta_i))
-      SSLASSO_pred_test<- Z_test%*%c(SSLASSO_coefs) + mod.out$intercept[L]
+      SSLASSO_pred_test<- X_test%*%c(SSLASSO_coefs) + mod.out$intercept[L]
       SSLASSO_mspe     <- mean((SSLASSO_pred_test - Y_test)^2)
       SSLASSO_mse_test <- mean((SSLASSO_pred_test - eta_test)^2)
       
@@ -274,7 +276,7 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
       n <- length(Y)
       log.f <- function(x) log(1/n) + log(x <= n) #log prior of the model size
       
-      test3 <- system.time(t1 <- try(out.ebreg <- ebreg( Y, Z, rbind(Z,Z_test), standardized = FALSE, 
+      test3 <- system.time(t1 <- try(out.ebreg <- ebreg( Y, X, rbind(X,X_test), standardized = FALSE, 
                                                          alpha = 0.99, prior = TRUE, M = 2000, 
                                                          log.f = log.f, sample.beta = TRUE, 
                                                          pred = TRUE, conf.level = 0.95), 
@@ -305,15 +307,15 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
     }
     
     
-    test3 <- system.time(t1 <- try(test <- svb.fit(X=Z, Y=Y, family = "linear", slab = "laplace",
+    test3 <- system.time(t1 <- try(test <- svb.fit(X=X, Y=Y, family = "linear", slab = "laplace",
                                                    intercept = TRUE), silent = TRUE))
     
     if(is.null(attr(t1,"class"))){
       sparsevb_coefs <- test$mu * test$gamma #approximate posterior mean
-      sparsevb_pred  <- Z%*%c(sparsevb_coefs) + test$intercept
+      sparsevb_pred  <- X%*%c(sparsevb_coefs) + test$intercept
       sparsevb_mse <- mean((sparsevb_pred - eta_i)^2)
       sparsevb_mad <- median(abs(sparsevb_pred - eta_i))
-      sparsevb_pred_test<- Z_test%*%c(sparsevb_coefs) + test$intercept
+      sparsevb_pred_test<- X_test%*%c(sparsevb_coefs) + test$intercept
       sparsevb_mspe     <- mean((sparsevb_pred_test - Y_test)^2)
       sparsevb_mse_test <- mean((sparsevb_pred_test - eta_test)^2)
       
@@ -326,14 +328,14 @@ simulation_func <- function(args_list, B, bin, ebreg_I, verbose = FALSE, seed = 
       sparsevb_c_res[k,] <- sparsevb_res[k,]
       
       if(max(sparsevb_coefs)>0){
-        sparsevb_pred_cov  <- Z%*%c(sparsevb_coefs) + test$intercept
+        sparsevb_pred_cov  <- X%*%c(sparsevb_coefs) + test$intercept
         sparse_mod <- lm(Y~sparsevb_pred_cov)
         sparsevb_coefs <- sparsevb_coefs*sparse_mod$coefficients[2] #approximate posterior mean
         sparsevb_pred <- sparse_mod$fitted.values
         
         sparsevb_mse <- mean((sparsevb_pred - eta_i)^2)
         sparsevb_mad <- median(abs(sparsevb_pred - eta_i))
-        sparsevb_pred_test <- Z_test%*%c(sparsevb_coefs) + 
+        sparsevb_pred_test <- X_test%*%c(sparsevb_coefs) + 
           sparse_mod$coefficients[2]*test$intercept + 
           sparse_mod$coefficients[1]
         sparsevb_mspe     <- mean((sparsevb_pred_test - Y_test)^2)
@@ -444,36 +446,36 @@ sim_bin_LR_2 <- function(lat_data, err_sd, x, N, M, M1, sig_sp, lat_sp, eta_var,
   
   RE_eff <- rnorm(N)
   t_datamat <- t(matrix(array(t_data),M,N))+RE_eff*err_sd
-  Z_cont <- t(t(t_datamat)+c(array(lat_data)))
-  Z <- 1*I(Z_cont < 0)
+  X_cont <- t(t(t_datamat)+c(array(lat_data)))
+  X <- 1*I(X_cont < 0)
   
   signal<- seq(1,M,1)[LP_data$signal==2]
   sig_ind <- rep(0,M)
   sig_ind[signal] <- 1
   
   
-  return(list(LP_data=LP_data,Z=Z, Z_cont = Z_cont,RE_eff=RE_eff,eta = t_eta,signal=signal,sig_ind=sig_ind))
+  return(list(LP_data=LP_data,X=X, X_cont = X_cont,RE_eff=RE_eff,eta = t_eta,signal=signal,sig_ind=sig_ind))
 }
 
 
-lasso <- function(Y,Z){
-  cv.out <- cv.glmnet(Z,Y,alpha = 1,nfolds = 10,lambda.min.ratio=0.001)
+lasso <- function(Y,X){
+  cv.out <- cv.glmnet(X,Y,alpha = 1,nfolds = 10,lambda.min.ratio=0.001)
   while(cv.out$lambda.min==min(cv.out$lambda)){
     ### Further decreasing the lambda if the smallest lambda was the best.
-    cv.out <- cv.glmnet(Z,Y,alpha = 1,nfolds = 10,lambda=exp(c(log(cv.out$lambda.1se),seq(log(min(cv.out$lambda)),log(min(cv.out$lambda)*0.001),length.out = 100))))
+    cv.out <- cv.glmnet(X,Y,alpha = 1,nfolds = 10,lambda=exp(c(log(cv.out$lambda.1se),seq(log(min(cv.out$lambda)),log(min(cv.out$lambda)*0.001),length.out = 100))))
   }
   cv.out
 }
 
-adap_lasso <- function(Y,Z){
-  ridge1_cv <- cv.glmnet(Z, Y, alpha = 0, nfolds = 10)
+adap_lasso <- function(Y,X){
+  ridge1_cv <- cv.glmnet(X, Y, alpha = 0, nfolds = 10)
   best_ridge_coef <- as.numeric(coef(ridge1_cv, s = ridge1_cv$lambda.min))[-1]
-  cv.out <- cv.glmnet(Z, Y, alpha = 1, nfolds = 10, lambda.min.ratio = 0.001,
+  cv.out <- cv.glmnet(X, Y, alpha = 1, nfolds = 10, lambda.min.ratio = 0.001,
                       penalty.factor = 1 / abs(best_ridge_coef))
   
   while(cv.out$lambda.min==min(cv.out$lambda)){
     ### Further decreasing the lambda if the smallest lambda was the best.
-    cv.out <- cv.glmnet(Z, Y, alpha = 1, nfolds = 10,
+    cv.out <- cv.glmnet(X, Y, alpha = 1, nfolds = 10,
                         penalty.factor = 1 / abs(best_ridge_coef),
                         lambda=exp(c(log(cv.out$lambda.1se), 
                                      seq(log(min(cv.out$lambda)),
@@ -483,20 +485,20 @@ adap_lasso <- function(Y,Z){
   cv.out
 }
 
-scad_func <- function(Y,Z,N,M){
-  cv.out2 <- cv.ncvreg(matrix(as.numeric(Z),N,M),Y,family = "gaussian",penalty = "SCAD",lambda.min=0.01)
+scad_func <- function(Y,X,N,M){
+  cv.out2 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "SCAD",lambda.min=0.01)
   while(cv.out2$lambda.min==min(cv.out2$lambda)){
     ### Further decreasing the lambda if the smallest lambda was the best.
-    cv.out2 <- cv.ncvreg(matrix(as.numeric(Z),N,M),Y,family = "gaussian",penalty = "SCAD",lambda=exp(seq(log(min(cv.out2$lambda)),log(min(cv.out2$lambda)/100),length.out = 20)))
+    cv.out2 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "SCAD",lambda=exp(seq(log(min(cv.out2$lambda)),log(min(cv.out2$lambda)/100),length.out = 20)))
   }
   cv.out2
 }
 
-MCP_func <- function(Y,Z,N,M){
-  cv.out3 <- cv.ncvreg(matrix(as.numeric(Z),N,M),Y,family = "gaussian",penalty = "MCP",lambda.min=0.01)
+MCP_func <- function(Y,X,N,M){
+  cv.out3 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "MCP",lambda.min=0.01)
   while(cv.out3$lambda.min==min(cv.out3$lambda)){
     ### Further decreasing the lambda if the smallest lambda was the best.
-    cv.out3 <- cv.ncvreg(matrix(as.numeric(Z),N,M),Y,family = "gaussian",penalty = "MCP",lambda=exp(seq(log(min(cv.out3$lambda)),log(min(cv.out3$lambda)/100),length.out = 20)))
+    cv.out3 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "MCP",lambda=exp(seq(log(min(cv.out3$lambda)),log(min(cv.out3$lambda)/100),length.out = 20)))
   }
   cv.out3
 }
@@ -518,14 +520,14 @@ sim_spat <- function(C, err_sd, beta0, N, M, M1, sig_sp, lat_sp, eta_var,
   t_data <- RFsimulate(model = RMstable(alpha = 2, scale = lat_sp,var = C^2), x=x, y=x,grid=TRUE,n=N)
   
   RE_eff <- rnorm(N)
-  Z <- t(matrix(array(t_data),M,N))+RE_eff*err_sd
+  X <- t(matrix(array(t_data),M,N))+RE_eff*err_sd
   
   signal<- seq(1,M,1)[LP_data$signal==2]
   sig_ind <- rep(0,M)
   sig_ind[signal] <- 1
   
   
-  return(list(LP_data=LP_data,Z=Z,RE_eff=RE_eff,eta = t_eta,signal=signal,sig_ind=sig_ind))
+  return(list(LP_data=LP_data,X=X,RE_eff=RE_eff,eta = t_eta,signal=signal,sig_ind=sig_ind))
 }
 
 
