@@ -10,7 +10,7 @@ authors:
 cff-version: "1.1.0"
 date-released: 2021=09-01
 message: "If you use this software, please cite it using these metadata."
-title: "Fitting high-dimensional linear regression models with unhidem"
+title: "PaRtitiOned empirical Bayes Ecm (PROBE) algorithm"
 version: "1.0"
 date-released: 2021-09-01
 url: "https://github.com/alexmclain/UNHIDEM"
