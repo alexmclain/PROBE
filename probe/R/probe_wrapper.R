@@ -158,7 +158,9 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
         T_vals <- NULL
         Xt_conv1 <- try2 <- 1
       } else {
-        cat("Warning loop completely recycled back to beta=0 again.\n")
+        E_step$beta_tilde <-  beta_t_old
+        E_step$gamma <-  gamma_old
+        E_step$beta_tilde_var <- beta_var_old
         break
       }
     }
