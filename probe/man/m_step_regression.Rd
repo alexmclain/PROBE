@@ -4,7 +4,7 @@
 \alias{m_step_regression}
 \title{Function for fitting the initial part of the M-step}
 \usage{
-m_step_regression(Y, W, W2, Z, a = -3/2, Int = TRUE)
+m_step_regression(Y, W, W2, Z = NULL, a = -3/2, Int = TRUE)
 }
 \arguments{
 \item{Y}{A matrix containing the outcome \code{Y}}

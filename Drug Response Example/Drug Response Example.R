@@ -1,4 +1,4 @@
-# unhidem application with CCLE data for all methods except conformal
+# probe application with CCLE data for all methods except conformal
 # Jackknife, which was ran separately due it's computational demand.
 #
 # This function runs 6 analysis methods (UNHIDEM, MCP, SCAD, LASSO
@@ -12,7 +12,7 @@
 
 rm(list=ls())
 require(caret)
-library(unhidem)
+library(probe)
 library(ncvreg)
 library(sparsevb)
 library(varbvs)
@@ -24,7 +24,7 @@ library(writexl)
 library(conformalInference)
 
 #Reading in data
-z_data <- read.csv("CCLE_Zdata.csv")
+x_data <- read.csv("CCLE_Xdata.csv")
 
 y_data <- read.csv("CCLE_Ydata.csv")
 y_data <- y_data[, colSums(apply(y_data, 2, is.na))==0]
@@ -55,45 +55,44 @@ for(i in 1:ncol(y_data)) {
     
     cat(paste0("Fitting fold ", j," for: "))
     
-    #UNHIDEM SECTION
-    cat("UNHIDEM, ")
-    Z <- as.matrix(z_data[ind!=j,])
-    M <- ncol(Z)
-    Z_mean <- mean(array(Z))
+    #PROBE SECTION
+    cat("PROBE, ")
+    X <- as.matrix(x_data[ind!=j,])
+    M <- ncol(X)
+    X_mean <- mean(array(X))
     Y <- outcome[ind!=j]
     
-    Z_test <- as.matrix(z_data[ind==j,])
+    X_test <- as.matrix(x_data[ind==j,])
     Y_test <- outcome[ind==j]
     t_test_data <- c(t_test_data, Y_test)
     
-    Z <- Z - Z_mean
-    Z_test <- Z_test - Z_mean
+    X <- X - X_mean
+    X_test <- X_test - X_mean
     
-    results <- unhidem(Y = Y, Z = Z, alpha = alpha) 
+    results <- probe(Y = Y, X = X) 
     
-    pred_res_test <- predict_unhidem_func(results, Z = Z_test, alpha = alpha)
-    yhat_unhidem <- pred_res_test$Pred
+    pred_res_test <- predict_probe_func(results, X = X_test, alpha = alpha)
+    yhat_probe <- pred_res_test$Pred
     
-    mspe[j,i,1] <- mean( (Y_test - yhat_unhidem)^2 )
-    mad[j,i,1] <- median( abs(Y_test - yhat_unhidem) )
+    mspe[j,i,1] <- mean( (Y_test - yhat_probe)^2 )
+    mad[j,i,1] <- median( abs(Y_test - yhat_probe) )
     
     # Empirical coverage probabilities and PI lengths
     t_ecp <- c( t_ecp, 1*I(Y_test > pred_res_test$PI_L & 
                              Y_test < pred_res_test$PI_U) )
     t_len <- c( t_len, pred_res_test$PI_U - pred_res_test$PI_L)
     
-    if(FALSE){
     #MCP AND SCAD SECTION
     cat("MCP-SCAD, ")
-    X <- Z
-    X_test <- Z_test
+    X <- X
+    X_test <- X_test
     
     set.seed(123)
     cv.out_mcp <- cv.ncvreg(X, Y, nfolds = 10,
-                            family = "gaussian",penalty = "MCP",seed=123)
+                            family = "gaussian", penalty = "MCP", seed=123)
     set.seed(123)
     cv.out_scad <- cv.ncvreg(X, Y, nfolds = 10,
-                             family = "gaussian",penalty = "SCAD",seed=123)
+                             family = "gaussian", penalty = "SCAD", seed=123)
     
     yhat_mcp  <- predict(cv.out_mcp, X_test, which = cv.out_mcp$min)
     yhat_scad <- predict(cv.out_scad, X_test, which = cv.out_scad$min)
@@ -133,7 +132,7 @@ for(i in 1:ncol(y_data)) {
     
     funs = lasso.funs(nlambda=100,cv=TRUE, lambda.min.ratio = 1e-04)
     
-    out.split.las <- conformal.pred.split(Z, Y, Z_test, alpha = alpha, seed = 123,
+    out.split.las <- conformal.pred.split(X, Y, X_test, alpha = alpha, seed = 123,
                                           train.fun = funs$train, predict.fun = 
                                             funs$predict, verb = FALSE)
     
@@ -148,8 +147,8 @@ for(i in 1:ncol(y_data)) {
     
     ### VARBVS
     cat("varbvs, ")
-    mod.out <- varbvs(X=Z, Z=NULL, y=Y, family = "gaussian", verbose = FALSE)
-    yhat_varbvs <- predict(mod.out,X = Z_test)
+    mod.out <- varbvs(X=X, Z=NULL, y=Y, family = "gaussian", verbose = FALSE)
+    yhat_varbvs <- predict(mod.out,X = X_test)
     
     mspe[j,i,7] <- mean( (Y_test - yhat_varbvs)^2 )
     mad[j,i,7] <- median( abs(Y_test - yhat_varbvs) )
@@ -157,40 +156,32 @@ for(i in 1:ncol(y_data)) {
     #### SSLASSO
     cat("SSLASSO, ")
     L <- 400
-    mod.out <- SSLASSO(X=Z, y=Y, variance = "unknown", lambda1 = 0.01, 
+    mod.out <- SSLASSO(X=X, y=Y, variance = "unknown", lambda1 = 0.01, 
                                             lambda0 = seq(0.01,M,length.out=L), 
                                             a = lasso_M1, b = M-lasso_M1)
     SSLASSO_coefs <- mod.out$beta[,L]
-    yhat_sslasso<- Z_test%*%c(SSLASSO_coefs) + mod.out$intercept[L]
+    yhat_sslasso<- X_test%*%c(SSLASSO_coefs) + mod.out$intercept[L]
     
     mspe[j,i,8] <- mean( (Y_test - yhat_sslasso)^2 )
     mad[j,i,8] <- median( abs(Y_test - yhat_sslasso) )
     
     ### sparsevb
     cat("and sparsevb. \n")
-    mod.out <- svb.fit(X=Z, Y=Y, family = "linear", slab = "laplace", mu = lasso_coefs,
+    mod.out <- svb.fit(X=X, Y=Y, family = "linear", slab = "laplace", mu = lasso_coefs,
                        intercept = TRUE, alpha = lasso_M1, beta = M - lasso_M1)
     sparsevb_coefs <- mod.out$mu * mod.out$gamma #approximate posterior mean
-    yhat_sparsevb<- Z_test%*%c(sparsevb_coefs) + mod.out$intercept
+    yhat_sparsevb<- X_test%*%c(sparsevb_coefs) + mod.out$intercept
     
     mspe[j,i,9] <- mean( (Y_test - yhat_sparsevb)^2 )
     mad[j,i,9] <- median( abs(Y_test - yhat_sparsevb) )
-    }
     
-    yhat_mcp <- yhat_unhidem
-    yhat_scad <- yhat_unhidem
-    yhat_lasso <- yhat_unhidem
-    yhat_alasso <- yhat_unhidem
-    yhat_lasso_conf <- yhat_unhidem
-    yhat_varbvs <- yhat_unhidem
-    yhat_sslasso <- yhat_unhidem
-    yhat_sparsevb <- yhat_unhidem
-     
     #Gather all of the predicted values
-    t_pred_data <- rbind( t_pred_data, cbind(yhat_unhidem, yhat_mcp, 
+    t_pred_data <- rbind( t_pred_data, cbind(yhat_probe, yhat_mcp, 
                                              yhat_scad, yhat_lasso, yhat_alasso, 
                                              yhat_lasso_conf, yhat_varbvs, yhat_sslasso, 
                                              yhat_sparsevb) )
+    print(round(mspe[j,i,],3))
+    print(round(mad[j,i,],3))
   }
   
   pred_data[,i,] <- t_pred_data 
@@ -206,8 +197,8 @@ for(i in 1:ncol(y_data)) {
 results <- list("pred_data" = data.frame(pred_data), "test_data" = 
                   data.frame(test_data), "ecp" = data.frame(ecp), 
                 "PI_len" =data.frame(PI_len), "mspe" = data.frame(mspe), 
-                "mad" = data.frame(mad))
+                "mad" = data.frame(mad), "fold_num" = ind)
 
-saveRDS(results,"Drug_results_W2.rds")
+saveRDS(results,"Drug_results.rds")
 
 

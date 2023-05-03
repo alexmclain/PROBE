@@ -1,14 +1,15 @@
 
+setwd("C:/Users/mclaina/OneDrive - University of South Carolina/Research/Imaging/PROBE/Programs/PROBE/Drug Response Example")
+
 library("conformalInference")
 require(caret)
-library(unhidem)
 library(ncvreg)
 library(dplyr)
 library(glmnet)
 library(writexl)
 
 #Reading in data
-z_data <- read.csv("CCLE_Zdata.csv")
+z_data <- read.csv("CCLE_Xdata.csv")
 
 y_data <- read.csv("CCLE_Ydata.csv")
 y_data <- y_data[, colSums(apply(y_data, 2, is.na))==0]

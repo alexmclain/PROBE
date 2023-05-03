@@ -1,41 +1,50 @@
 
 # Introduction
 
-This repository contains the R software tools to run a PaRtitiOned
-empirical Bayes Ecm (PROBE) algorithm. Unlike previous approaches, our
-model formulation is focused on maximum (MAP) Unlike previous
-approaches, our model for- mulation is focused on maximum (MAP)
-estimation of the regression coefficients with minimal prior assumptions
-on the parameters. Plug-in empirical Bayes estimates of all
-hyperparameters are used. Efficient estimation is completed through the
-use of a partitioned and extended expectation conditional maximization
-(ECM) algorithm which is similar to a combination of an Estimation
-Conditional Maximization (ECM) and a parameter expanded (PX) EM
-algorithm. PROBE is a novel alternative to Markov chain Monte Carlo
+This repository contains the R software tools to run the PaRtitiOned
+empirical Bayes Ecm (PROBE) algorithm. Minimal prior assumptions on the
+parameters are used through the use of plug-in empirical Bayes estimates
+of hyperparameters. Efficient maximum (MAP) estimation is completed
+through a Parameter-Expanded Expectation-Conditional-Maximization
+(PX-ECM) algorithm. The PX-ECM results in a robust computationally
+efficient coordinate-wise optimization, which adjusts for the impact of
+other predictor variables. The completion of the E-step uses an approach
+motivated by the popular two-groups approach to multiple testing. The
+PROBE algorithm is applied to sparse high-dimensional linear regression,
+which can be completed using one-at-a-time or all-at-once type
+optimization. PROBE is a novel alternative to Markov chain Monte Carlo
 (Liang et al. 2008; Bondell and Reich 2012 ; Chae, Lin, and Dunson
 2019), empirical Bayes (George and Foster 2000; Martin, Mess, and Walker
 2017; Martin and Tang 2020), and Variational Bayes (Carbonetto and
 Stephens 2012; Blei, Kucukelbir, and McAuliffe 2017; Ray and Szabó 2021)
 approaches to fitting sparse linear models.
 
-Our proposed Bayesian framework focuses on MAP estimation of the
-regression parameters, which are flexible and minimally influence by
-prior model assumptions. The MAP estimates are obtained via
-coordinate-wise optimization of each parameter conditional on confounder
-information, i.e., the composite impact of the remaining predictor
-variables. As the confounder information is unknown in practice, we
-utilize the EM algorithm (Dempster, Laird, and Rubin 1977). The M-step
-consists of maximizing the parameter-specific expected posterior, given
-the current estimates of the other parameters in the model, which is
-similar to the partitioned ECM algorithm (Meng and Rubin 1992, 1993;
-Dyk, Meng, and Rubin 1995). Further, we add an expanded parameter which
-helps convergence and robustness of the algorithm, and adds further
-information to the estimation of the posterior variance (versus what is
-used current in Variational Bayesian methods). The E-step consists of
-estimating the moments of the unknown confounder term via updating
-hyperparameters posterior distributions with plug-in empirical Bayes
+Our proposed method performs Bayesian variable selection with an
+uninformative spike-and-slab prior on the regression parameters, which
+has not yet been used in the high-dimensional setting. We focus on MAP
+estimation of regression parameters, latent variable selection
+indicators, and the residual variance. We use a quasi Parameter-Expanded
+Expectation-Conditional-Maximization (PX-ECM) which is a combination of
+the ECM Dyk, Meng, and Rubin (1995) and PX-EM (Liu, Rubin, and Wu 1998).
+With the standard EM, the M-step would require optimization with respect
+to the high-dimensional regression parameter, which is not feasible with
+uninformative priors. Here, the ECM is used to break the M-step into a
+coordinate-wise optimization procedure. The PX portion of the algorithm
+adds a parameter which scales the impact of the remaining predictor
+variables. Unlike other coordinate-wise optimization approaches, this
+does not assume the impact of other predictor variables is fixed. The
+benefits of this formulation are that the impact of the remaining
+predictor variables only needs to be known up to a multiplicative
+constant, we can account for the increase in variability due to the
+dependence between the predictor and the impact of the remaining
+predictor variables, and it adds stability to the algorithm. The E-step
+consists of estimating the probability of the latent variable selection
+indicators via updating hyperparameters with plug-in empirical Bayes
 estimates, which is motivated by the popular two-groups approach to
 multiple testing (Efron et al. 2001; Sun and Cai 2007).
+
+and variants of the PROBE algorithm have been developed. The examples
+below focus on the variant.
 
 # Example of PROBE
 
@@ -286,14 +295,6 @@ Inference: A Journal of the IMA* 8 (3): 621–53.
 
 </div>
 
-<div id="ref-Dem77" class="csl-entry">
-
-Dempster, A. P., N. M. Laird, and D. B. Rubin. 1977. “Maximum Likelihood
-from Incomplete Data via the EM Algorithm.” *Journal of the Royal
-Statistical Society. Series B. Methodological* 39 (1): 1–38.
-
-</div>
-
 <div id="ref-vanetal95" class="csl-entry">
 
 Dyk, David A. van, Xiao-Li Meng, and Donald B. Rubin. 1995. “Maximum
@@ -323,6 +324,15 @@ Bayes Variable Selection.” *Biometrika* 87 (4): 731–47.
 Liang, Feng, Rui Paulo, German Molina, Merlise A Clyde, and Jim O
 Berger. 2008. “Mixtures of g Priors for Bayesian Variable Selection.”
 *Journal of the American Statistical Association* 103 (481): 410–23.
+
+</div>
+
+<div id="ref-Liuetal98" class="csl-entry">
+
+Liu, Chuanhai, Donald B. Rubin, and Ying Nian Wu. 1998. “<span
+class="nocase">Parameter expansion to accelerate EM: The PX-EM
+algorithm</span>.” *Biometrika* 85 (4): 755–70.
+<https://doi.org/10.1093/biomet/85.4.755>.
 
 </div>
 

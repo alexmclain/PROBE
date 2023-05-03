@@ -1,5 +1,5 @@
 #' @title Fitting PaRtitiOned empirical Bayes Ecm (PROBE) algorithm to sparse high-dimensional linear models.
-#' @description A wrapper function for the main PROBE algorithm function.  The R package is a work in progress.
+#' @description A wrapper function for the all-at-once variant of the PROBE algorithm.
 #' @usage probe(Y, X, Z = NULL, ep = 0.1, maxit = 10000, Y_test = NULL, X_test = NULL, 
 #' Z_test = NULL, verbose = FALSE, signal = NULL, eta_i = NULL, alpha = 0.05, 
 #' plot_ind = FALSE, adj = 5)
@@ -9,8 +9,8 @@
 #' @param ep Value against which to compare convergence criterion (default = 0.1).
 #' @param maxit Maximum number of iterations the algorithm will run for (default = 10000).
 #' @param Y_test (optional) Test Y data used plotting purposes only (doesn't impact results).
-#' @param Z_test (optional) Test Z data used plotting purposes only (doesn't impact results).
 #' @param X_test (optional) Test X data used plotting purposes only (doesn't impact results).
+#' @param Z_test (optional) Test Z data used plotting purposes only (doesn't impact results).
 #' @param verbose A logical (true/false) value whether to print algorithm iteration progress and summary quantities (default = FALSE).
 #' @param signal (optional) A vector of indicies of the true non-null coefficients. This is used to calculate the true and false discovery rates by iteration for simulated data. Used plotting purposes only (doesn't impact results).
 #' @param eta_i (optional) A vector of the true signal. This is used to calculate the MSE by iteration for simulated data. Used plotting purposes only (doesn't impact results).
@@ -49,11 +49,21 @@
 #' X_test = X_test, alpha = alpha, plot_ind = plot_ind, adj = adj)
 #' 
 #' # Predicting for test data
-#' pred_res <- predict_probe_func(full_res, X = X_test, alpha = alpha)
-#' head(pred_res)
+#' pred_res <- predict_probe_func(full_res, X = X_test)
+#' sqrt(mean((Y_test - pred_res$Pred)^2))
 #' 
-#' # Estimate of the residual variance
+#' # Estimate of the residual variance and true value
 #' full_res$sigma2_est
+#' sigma2_tr
+#' 
+#' # RMSE of estimated beta coefficients
+#' beta_ast_est <- full_res$beta_ast_hat
+#' sqrt(mean((beta_ast_est - beta_tr)^2))
+#' 
+#' # Posterior expectation of gamma by true
+#' gamma_est <- full_res$E_step$gamma
+#' sum(gamma_est)
+#' sum(gamma_est[beta_tr>0])
 #' 
 #' ### Example with additional covariate data Z (not subjected to the sparsity assumption)
 #' data(Sim_data_cov)
@@ -72,6 +82,7 @@
 #' summary(lm(Y~Z$Cont_cov + Z$Binary_cov))$coefficients
 #' 
 #' 
+#' @export
 probe <- function(Y, X, Z = NULL, ep = 0.1, maxit = 10000, 
                   Y_test = NULL, X_test = NULL, Z_test = NULL,
                   verbose = FALSE, signal = NULL, eta_i = NULL, 
@@ -250,8 +261,8 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
     cat("Warning: loop completely recycled back to beta=gamma=0 twice. Optimization failed.\n")
   }
   
-  if(E_step$adj_warning == 1){
-    cat("Warning: results indicate bandwidth in density estimation \n is too narrow, consider raising 'adj' and running again. \n")
+  if(E_step$adj_warning != 0){
+    cat("Warning: results indicate bandwidth in density estimation \n may be too narrow, consider raising 'adj'. \n")
   }
   
   M_step <- LR_update

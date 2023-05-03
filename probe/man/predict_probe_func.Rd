@@ -25,19 +25,9 @@ A function providing predictions, along with \eqn{(1-\alpha)*100\%} credible, an
 }
 \examples{
 ### Example
-data(Sim_data)
-attach(Sim_data)
-alpha <- 0.05
-plot_ind <- TRUE
-adj <- 10
-
-# Run the analysis. Y_test and X_test are included for plotting purposes only
-full_res <- probe( Y = Y, X = X, alpha = alpha, plot_ind = plot_ind, 
-Y_test = Y_test, X_test = X_test, adj = adj)
-
-# Predicting for test data
-pred_res <- predict_probe_func(full_res, X = X_test, Z = NULL, alpha = alpha)
-head(pred_res)
+#not run
+# pred_res <- predict_probe_func(full_res, X = X_test, Z = NULL, alpha = alpha)
+# head(pred_res)
 
 }
 \references{

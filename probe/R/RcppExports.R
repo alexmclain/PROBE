@@ -9,6 +9,10 @@ PROBE_cpp0_5_6_covs <- function(y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, X)
     .Call(`_probe_PROBE_cpp0_5_6_covs`, y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, X)
 }
 
+PROBE_one_cpp <- function(y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, update_order) {
+    .Call(`_probe_PROBE_one_cpp`, y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, update_order)
+}
+
 LM_by_col <- function(y, X, sigma2) {
     .Call(`_probe_LM_by_col`, y, X, sigma2)
 }

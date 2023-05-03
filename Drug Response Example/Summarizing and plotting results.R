@@ -7,17 +7,17 @@ library(ggplot2)
 y_data <- read.csv("CCLE_Ydata.csv")
 y_data <- y_data[, colSums(apply(y_data, 2, is.na))==0]
 nfolds <- 10
+method_num <- 10
 
 # Reading in the results
-results <- readRDS("Drug_results_full.rds")
+results <- readRDS("Drug_results_new.rds")
 
-mspe <- array(unlist(results$mspe), dim = c(nfolds, ncol(y_data), 9))
-mad <- array(unlist(results$mad), dim = c(nfolds, ncol(y_data), 9))
-pred_data <- array(unlist(results$pred_data), dim = c(nrow(y_data), ncol(y_data), 9)) 
+mspe <- array(unlist(results$mspe), dim = c(nfolds, ncol(y_data), method_num))
+mad <- array(unlist(results$mad), dim = c(nfolds, ncol(y_data), method_num))
+pred_data <- array(unlist(results$pred_data), dim = c(nrow(y_data), ncol(y_data), method_num)) 
 LR_test <- unlist(results$lr_test)
 ecp <-  array(unlist(results$ecp), dim = c(nrow(y_data), ncol(y_data), 4))
 PI_len  <- array(unlist(results$PI_len), dim = c(nrow(y_data), ncol(y_data), 4))
-
 
 ##### Processing Results #####
 sd_mspe_outcome <- do.call(cbind, (lapply(apply(mspe, 3, list), function(x){apply(x[[1]], 2, sd)})))
@@ -30,7 +30,7 @@ mspe_outcome <- apply(squared_errors, 3, colMeans, na.rm=T)
 abs_errors <- abs(test_array-pred_data)
 mads_outcome <- apply(abs_errors, 3, function(x){apply(x, 2, median, na.rm=T)})
 
-methods <- c("PROBE", "MCP", "SCAD", "LASSO", "ALASSO", "EBREG", "VARBVS", "SSLASSO", "SPARSEVB")
+methods <- c("PROBE", "MCP", "SCAD", "LASSO", "ALASSO", "EBREG", "VARBVS", "SSLASSO", "SPARSEVB", "PROBE_one")
 drugs <- names(y_data)
 colnames(sd_mspe_outcome) = colnames(sd_mad_outcome) = colnames(mspe_outcome) = colnames(mads_outcome)  <- methods
 rownames(sd_mspe_outcome) = rownames(sd_mad_outcome) = rownames(mspe_outcome) = rownames(mads_outcome) <-  drugs
@@ -43,12 +43,8 @@ PILen_outcome <- apply(PI_len, 3, colMeans, na.rm=T)
 fold_num <- results$fold_num
 mean_PI <- array(0, dim = c(ncol(y_data),nfolds,4))
 for(i in 1:8){
-  count <- 1
-  count2 <- n_length[1]
   for(k in 1:nfolds){
     mean_PI[i,k,] <- apply( PI_len[fold_num == k,i,], 2, mean)
-    count <- count2 + 1
-    count2 <- count2 + n_length[k+1]
   }
 }
 
@@ -68,7 +64,7 @@ sheets <- list("MPSE" = data.frame(drugs,mspe_outcome),
                "SD PI Length"= data.frame(drugs, sd_PI_length))
 
 ##### Exporting results to excel file  #####
-write_xlsx(sheets, "Table Results_d.xlsx")
+write_xlsx(sheets, "Table Results.xlsx")
 
 
 ## Best MPSE and MAD
@@ -80,14 +76,15 @@ data.frame(drugs, best_MPSE, best_MAD)
 
 
 
-##### Create Plots of MPSE and MAD. This has not been updated.  #####
+##### Create Plots of MPSE and MAD.  #####
 
 
-cols4methods <- c("black","firebrick1" ,  "darkgoldenrod4" , "maroon2",         "cornflowerblue" ,            "palevioletred2",  "lightsteelblue4"   ,   "blue1", "coral")
-cols4methods_nosvb <- cols4methods[-c(6)]
+cols4methods <- c("black","firebrick1" ,  "darkgoldenrod4" , "maroon2",         "cornflowerblue", "chartreuse4" ,            "palevioletred2",  "lightsteelblue4"   ,   "blue1", "coral")
+# cols4methods <- c("black","firebrick1" ,  "darkgoldenrod4" , "maroon2",         "cornflowerblue" ,            "palevioletred2",  "lightsteelblue4"   ,   "blue1", "coral")
+cols4methods_nosvb <- cols4methods[-c(7)]
 
-shape_vals <- c(15:23)
-shape_vals_nosvb <- shape_vals[-c(6)]
+shape_vals <- c(15:24)
+shape_vals_nosvb <- shape_vals[-c(7)]
 
 pos_wid <- 0.88
 pos_siz <- 3
@@ -161,7 +158,7 @@ ggplot(mspe_data, aes(x=Drug, y=MPSE, color = Method)) +
   
   theme(axis.text.x = element_text(angle = 30,hjust=1,vjust=0.98,size=15), axis.text.y=element_text(size=15), axis.title=element_text(size=17)) +
   theme(legend.text=element_text(size=15), legend.title=element_text(size=17) )
-ggsave("Example1_MSPE_nosparsevb2.pdf", dpi = 600, width = 15*0.9, height = 6*0.9)
+ggsave("Example1_MSPE_nosparsevb.pdf", dpi = 600, width = 15*0.9, height = 6*0.9)
 dev.off()
 
 #Plot for MAD
@@ -177,7 +174,7 @@ ggplot(mad_data, aes(x=Drug, y=MAD, color = Method)) +
   scale_shape_manual(values=shape_vals_nosvb) +
   theme(axis.text.x = element_text(angle = 30,hjust=1,vjust=0.98,size=15), axis.text.y=element_text(size=15), axis.title=element_text(size=17)) +
   theme(legend.text=element_text(size=15), legend.title=element_text(size=17) )
-ggsave("Example1_MAD_nosparsevb2.pdf", dpi = 600, width = 15*0.9, height = 6*0.9)
+ggsave("Example1_MAD_nosparsevb.pdf", dpi = 600, width = 15*0.9, height = 6*0.9)
 dev.off()
 
 
@@ -192,6 +189,8 @@ drugs <- gsub("_ActArea", "", drugs)
 drugs <- gsub("\\.", "-", drugs)
 
 ## Adding Jackknife data to pred_data
+conf_jack_w_cv <- readRDS("Conform_lasso_jack.rds")
+EBreg_unit <- readRDS("EBreg_unif.rds")
 pred_data2 <- array(unlist(results$pred_data), dim = c(nrow(y_data), ncol(y_data), 6)) 
 pred_data <- array(0, dim = c(nrow(y_data), ncol(y_data), 8)) 
 pred_data[,,1:6] <- pred_data2

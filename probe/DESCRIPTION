@@ -1,16 +1,19 @@
 Package: probe
 Type: Package
-Title: PaRtitiOned empirical Bayes Ecm (PROBE) algorithm
-Version: 1.0
-Date: 2022-08-31
-Author: Alex McLain
-Maintainer: Anja Zgodic <azgodic@email.sc.edu>
-Description: This package contains functions to fit an efficient and powerful Bayesian approach for sparse high-dimensional linear regression. Unlike previous approaches, our model formulation is focused on maximum a posteriori (MAP) estimation of the regression coefficients with minimal prior assumptions on the parameters. Plug-in empirical Bayes estimates of all hyperparameters are used. Efficient estimation is completed through the use of a partitioned and extended expectation conditional maximization (ECM) algorithm which is similar to a combination of an Estimation Conditional Maximization (ECM) and a parameter expanded (PX) EM algorithm. The result is a PaRtitiOned empirical Bayes Ecm (PROBE) algorithm applied to sparse high-dimensional linear regression. We give functions to estimate credible and prediction intervals for predictions of future values.
+Title: Sparse high-dimensional linear regression with a PaRtitiOned empirical Bayes Ecm (PROBE) algorithm
+Version: 1.1
+Date: 2023-05-01
+Authors@R: c(person("Alexander", "McLain", email = "mclaina@mailbox.sc.edu", role = c("aut", "cre")), person("Anja", "Zodiac", role = "aut"))
+Author: Alexander McLain [aut, cre],
+  Anja Zgodic [aut]
+Maintainer: Alexander McLain <mclaina@mailbox.sc.edu>
+Description: This package contains functions to fit an efficient and powerful Bayesian approach for sparse high-dimensional linear regression. Minimal prior assumptions on the parameters are used through the use of plug-in empirical Bayes estimates of hyperparameters. Efficient maximum a posteriori (MAP) estimation is completed through a Parameter-Expanded Expectation-Conditional-Maximization (PX-ECM) algorithm. The PX-ECM results in a robust computationally efficient coordinate-wise optimization, which adjusts for the impact of other predictor variables. The completion of the E-step uses an approach motivated by the popular two-groups approach to multiple testing. The result is a PaRtitiOned empirical Bayes Ecm (PROBE) algorithm applied to sparse high-dimensional linear regression, which can be completed using one-at-a-time or all-at-once type optimization. 
+BugReports: https://github.com/alexmclain/PROBE/issues
 License: GPL (>= 2)
 Encoding: UTF-8
 RoxygenNote: 7.2.1
-Imports: Rcpp (>= 1.0.6)
+Imports: Rcpp (>= 1.0.6), RcppArmadillo, glmnet
 LinkingTo: Rcpp, RcppArmadillo
 NeedsCompilation: yes
-Packaged: 2021-07-30 14:02:19 UTC; anjazgodic
+Packaged: 2023-04-30 14:02:19 UTC; anjazgodic
 Depends: R (>= 4.00)
