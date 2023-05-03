@@ -4,20 +4,21 @@
 This repository contains the R software tools to run the PaRtitiOned
 empirical Bayes Ecm (PROBE) algorithm. Minimal prior assumptions on the
 parameters are used through the use of plug-in empirical Bayes estimates
-of hyperparameters. Efficient maximum (MAP) estimation is completed
-through a Parameter-Expanded Expectation-Conditional-Maximization
-(PX-ECM) algorithm. The PX-ECM results in a robust computationally
-efficient coordinate-wise optimization, which adjusts for the impact of
-other predictor variables. The completion of the E-step uses an approach
-motivated by the popular two-groups approach to multiple testing. The
-PROBE algorithm is applied to sparse high-dimensional linear regression,
-which can be completed using one-at-a-time or all-at-once type
-optimization. PROBE is a novel alternative to Markov chain Monte Carlo
-(Liang et al. 2008; Bondell and Reich 2012 ; Chae, Lin, and Dunson
-2019), empirical Bayes (George and Foster 2000; Martin, Mess, and Walker
-2017; Martin and Tang 2020), and Variational Bayes (Carbonetto and
-Stephens 2012; Blei, Kucukelbir, and McAuliffe 2017; Ray and Szabó 2021)
-approaches to fitting sparse linear models.
+of hyperparameters. Efficient maximum *a posteriori* (MAP) estimation is
+completed through a Parameter-Expanded
+Expectation-Conditional-Maximization (PX-ECM) algorithm. The PX-ECM
+results in a robust computationally efficient coordinate-wise
+optimization, which adjusts for the impact of other predictor variables.
+The completion of the E-step uses an approach motivated by the popular
+two-groups approach to multiple testing. The PROBE algorithm is applied
+to sparse high-dimensional linear regression, which can be completed
+using one-at-a-time or all-at-once type optimization. PROBE is a novel
+alternative to Markov chain Monte Carlo (Liang et al. 2008; Bondell and
+Reich 2012 ; Chae, Lin, and Dunson 2019), empirical Bayes (George and
+Foster 2000; Martin, Mess, and Walker 2017; Martin and Tang 2020), and
+Variational Bayes (Carbonetto and Stephens 2012; Blei, Kucukelbir, and
+McAuliffe 2017; Ray and Szabó 2021) approaches to fitting sparse linear
+models.
 
 Our proposed method performs Bayesian variable selection with an
 uninformative spike-and-slab prior on the regression parameters, which
@@ -43,14 +44,14 @@ indicators via updating hyperparameters with plug-in empirical Bayes
 estimates, which is motivated by the popular two-groups approach to
 multiple testing (Efron et al. 2001; Sun and Cai 2007).
 
-and variants of the PROBE algorithm have been developed. The examples
-below focus on the variant.
+*One-at-a-time* and *all-at-once* variants of the PROBE algorithm have
+been developed. The examples below focus on the *all-at-once* variant.
 
 # Example of PROBE
 
-The following is demonstration of how to implement PROBE with simulated
-data. Please note that the package is still a work in progress and we
-are continually making improvements.
+The following is demonstration of how to implement all-at-once PROBE
+with simulated data. Please note that the package is still a work in
+progress and we are continually making improvements.
 
 Install the package.
 
