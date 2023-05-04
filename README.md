@@ -43,14 +43,14 @@ indicators via updating hyperparameters with plug-in empirical Bayes
 estimates, which is motivated by the popular two-groups approach to
 multiple testing (Efron et al. 2001; Sun and Cai 2007).
 
-and variants of the PROBE algorithm have been developed. The examples
-below focus on the variant.
+One-at-a-time and all-at-once variants of the PROBE algorithm have been
+developed. The examples below focus on the all-at-once variant.
 
 # Example of PROBE
 
-The following is demonstration of how to implement PROBE with simulated
-data. Please note that the package is still a work in progress and we
-are continually making improvements.
+The following is demonstration of how to implement all-at-once PROBE
+with simulated data. Please note that the package is still a work in
+progress and we are continually making improvements.
 
 Install the package.
 
