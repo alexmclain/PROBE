@@ -48,6 +48,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// PROBE_one_cpp
+List PROBE_one_cpp(const arma::vec y, const arma::mat Z, const arma::colvec Wt, const arma::colvec W_var, const arma::colvec delta, const arma::colvec beta_vec, const arma::mat Z2, double sigma2, const arma::colvec update_order);
+RcppExport SEXP _probe_PROBE_one_cpp(SEXP ySEXP, SEXP ZSEXP, SEXP WtSEXP, SEXP W_varSEXP, SEXP deltaSEXP, SEXP beta_vecSEXP, SEXP Z2SEXP, SEXP sigma2SEXP, SEXP update_orderSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type Wt(WtSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type W_var(W_varSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type delta(deltaSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type beta_vec(beta_vecSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Z2(Z2SEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type update_order(update_orderSEXP);
+    rcpp_result_gen = Rcpp::wrap(PROBE_one_cpp(y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, update_order));
+    return rcpp_result_gen;
+END_RCPP
+}
 // LM_by_col
 List LM_by_col(const arma::vec y, const arma::mat X, double sigma2);
 RcppExport SEXP _probe_LM_by_col(SEXP ySEXP, SEXP XSEXP, SEXP sigma2SEXP) {
@@ -102,6 +121,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_probe_PROBE_cpp0_5_6", (DL_FUNC) &_probe_PROBE_cpp0_5_6, 8},
     {"_probe_PROBE_cpp0_5_6_covs", (DL_FUNC) &_probe_PROBE_cpp0_5_6_covs, 9},
+    {"_probe_PROBE_one_cpp", (DL_FUNC) &_probe_PROBE_one_cpp, 9},
     {"_probe_LM_by_col", (DL_FUNC) &_probe_LM_by_col, 3},
     {"_probe_LM_w_COVS_by_col", (DL_FUNC) &_probe_LM_w_COVS_by_col, 4},
     {"_probe_MVM", (DL_FUNC) &_probe_MVM, 2},

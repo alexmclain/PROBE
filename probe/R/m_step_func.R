@@ -17,7 +17,7 @@
 #' @examples
 #' #not run
 #' #mod <- m_step_regression(Y, W_ast, W_ast_var + W_ast^2, Z)
-m_step_regression <- function(Y, W, W2, Z, a = -3/2, Int = TRUE) {
+m_step_regression <- function(Y, W, W2, Z = NULL, a = -3/2, Int = TRUE) {
   
   N <- length(Y)
   if(!is.null(W)){
@@ -115,6 +115,15 @@ m_step_cpp_func <- function(Y, X, Z = NULL, W_ast, W_ast_var, gamma,
   return(ret)
 }
 
+m_step_cpp_one <- function(Y, X, W_ast, W_ast_var, gamma, 
+                             beta_t, X_2, sigma2, update_order) {
+  
+  N <- length(Y)
+  LRcpp <- PROBE_one_cpp(Y, X, W_ast, W_ast_var, gamma, 
+                           beta_t, X_2, sigma2, update_order)
+  
+  LRcpp
+}
 
 
 lr_cpp_func <- function(Y, X, Z = NULL, sigma2) {

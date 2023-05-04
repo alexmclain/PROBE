@@ -13,20 +13,11 @@
 #' McLain, A. C., Zgodic, A., & Bondell, H. (2022). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. arXiv preprint arXiv:2209.08139.
 #' @examples
 #' ### Example
-#' data(Sim_data)
-#' attach(Sim_data)
-#' alpha <- 0.05
-#' plot_ind <- TRUE
-#' adj <- 10
+#' #not run
+#' # pred_res <- predict_probe_func(full_res, X = X_test, Z = NULL, alpha = alpha)
+#' # head(pred_res)
 #' 
-#' # Run the analysis. Y_test and X_test are included for plotting purposes only
-#' full_res <- probe( Y = Y, X = X, alpha = alpha, plot_ind = plot_ind, 
-#' Y_test = Y_test, X_test = X_test, adj = adj)
-#' 
-#' # Predicting for test data
-#' pred_res <- predict_probe_func(full_res, X = X_test, Z = NULL, alpha = alpha)
-#' head(pred_res)
-#' 
+#' @export
 predict_probe_func <- function(res, X, Z = NULL, alpha = 0.05, 
                                  X_2 = NULL) {
   
@@ -46,6 +37,10 @@ predict_probe_func <- function(res, X, Z = NULL, alpha = 0.05,
     X <- matrix(X,N_test,M)
     X_2 <- NULL
   }
+  if(!is.null(res$X_mean)){
+    X <- t(t(X) - res$X_mean)
+  }
+  
   if (is.null(X_2)) X_2 <- X * X
   X <- as.matrix(X)
   X_2 <- as.matrix(X_2)

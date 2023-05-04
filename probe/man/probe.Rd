@@ -55,7 +55,7 @@ A list including
 \code{count} the total number of iterations before convergence.
 }
 \description{
-A wrapper function for the main PROBE algorithm function.  The R package is a work in progress.
+A wrapper function for the all-at-once variant of the PROBE algorithm.
 }
 \examples{
 ### Example
@@ -70,11 +70,21 @@ full_res <- probe( Y = Y, X = X, Y_test = Y_test,
 X_test = X_test, alpha = alpha, plot_ind = plot_ind, adj = adj)
 
 # Predicting for test data
-pred_res <- predict_probe_func(full_res, X = X_test, alpha = alpha)
-head(pred_res)
+pred_res <- predict_probe_func(full_res, X = X_test)
+sqrt(mean((Y_test - pred_res$Pred)^2))
 
-# Estimate of the residual variance
+# Estimate of the residual variance and true value
 full_res$sigma2_est
+sigma2_tr
+
+# RMSE of estimated beta coefficients
+beta_ast_est <- full_res$beta_ast_hat
+sqrt(mean((beta_ast_est - beta_tr)^2))
+
+# Posterior expectation of gamma by true
+gamma_est <- full_res$E_step$gamma
+sum(gamma_est)
+sum(gamma_est[beta_tr>0])
 
 ### Example with additional covariate data Z (not subjected to the sparsity assumption)
 data(Sim_data_cov)

@@ -8,10 +8,10 @@ authors:
     family-names: Zgodic
     given-names: Anja
 cff-version: "1.1.0"
-date-released: 2021=09-01
+date-released: 2023-05-01
 message: "If you use this software, please cite it using these metadata."
-title: "PaRtitiOned empirical Bayes Ecm (PROBE) algorithm"
-version: "1.0"
-date-released: 2021-09-01
+title: "Sparse high-dimensional linear regression with a PaRtitiOned empirical Bayes Ecm (PROBE) algorithm"
+version: "1.1"
+date-released: 2023-05-01
 url: "https://github.com/alexmclain/UNHIDEM"
 ...

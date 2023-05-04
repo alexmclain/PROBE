@@ -36,21 +36,30 @@ e_step_func <- function(beta_t, beta_var, df, adj = 5, lambda = 0.1, monotone=TR
                          df_val = df)
   gamma <- 1-EB_res$lfdr
   adj_warning <- EB_res$adj_warning
+  bw <- EB_res$bw
   
-  if(sum(gamma)==0 & adj_warning == 1){
-    gamma <- 1-lfdr_t_func(T = T_vals, pi0 = pi_hat, trunc=TRUE, 
+  if(sum(gamma)==0){
+    EB_res <- lfdr_t_func(T = T_vals, pi0 = pi_hat, trunc=TRUE, 
                            monotone = TRUE, adj = 2*adj, 
-                           df_val = df)$lfdr
+                           df_val = df)
+    
+    adj_warning <- EB_res$adj_warning*10 + 10 
+    bw <- EB_res$bw
+    gamma <- 1-EB_res$lfdr
+    
     if(sum(gamma)==0){
-      gamma <- 1-lfdr_t_func(T = T_vals, pi0 = pi_hat, trunc=TRUE, 
+      EB_res <- lfdr_t_func(T = T_vals, pi0 = pi_hat, trunc=TRUE, 
                              monotone = FALSE, adj = 2*adj, 
-                             df_val = df)$lfdr
+                             df_val = df)
+      adj_warning <- EB_res$adj_warning*100 + 100 + adj_warning 
+      bw <- EB_res$bw
+      gamma <- 1-EB_res$lfdr
     }
   }
   
   ret <- list(beta_tilde = beta_t, beta_tilde_var = beta_var, gamma = gamma, 
               lfdr = 1 - gamma, pi0 = pi_hat, p_vals = p_vals, T_vals = T_vals, 
-              df = df, adj_warning = adj_warning)
+              df = df, adj_warning = adj_warning, bw = bw)
   return(ret)
 }
 
@@ -109,10 +118,11 @@ lfdr_t_func <- function (T, pi0 = NULL, trunc = TRUE, monotone = TRUE, adj=3,
   f <- list(x=sort(T),y=lfdr[order(T)])
   
   adj_warning = 0
-  if(any(max_d > max_n)){
+  if(any(max_d > max_n*1.1)){
     adj_warning = 1
   }
   res <- list(lfdr = lfdr_out, f = f, 
-              adj_warning = adj_warning)
+              adj_warning = adj_warning, 
+              bw = myd$bw)
   return(res)
 }
