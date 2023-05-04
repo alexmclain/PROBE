@@ -30,7 +30,11 @@ mspe_outcome <- apply(squared_errors, 3, colMeans, na.rm=T)
 abs_errors <- abs(test_array-pred_data)
 mads_outcome <- apply(abs_errors, 3, function(x){apply(x, 2, median, na.rm=T)})
 
+<<<<<<< HEAD
 methods <- c("PROBE", "MCP", "SCAD", "LASSO", "ALASSO", "EBREG", "VARBVS", "SSLASSO", "SPARSEVB", "PROBE.1")
+=======
+methods <- c("PROBE", "MCP", "SCAD", "LASSO", "ALASSO", "EBREG", "VARBVS", "SSLASSO", "SPARSEVB", "PROBE_one")
+>>>>>>> 25f81299ab12c62ec86c11e21e5026c2fab2baa6
 drugs <- names(y_data)
 colnames(sd_mspe_outcome) = colnames(sd_mad_outcome) = colnames(mspe_outcome) = colnames(mads_outcome)  <- methods
 rownames(sd_mspe_outcome) = rownames(sd_mad_outcome) = rownames(mspe_outcome) = rownames(mads_outcome) <-  drugs

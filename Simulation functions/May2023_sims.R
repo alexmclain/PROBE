@@ -37,7 +37,11 @@ library(R.utils)
 library(ncvreg)
 library(dplyr)
 
+<<<<<<< HEAD:Simulation functions/May2023_sims.R
 parlist <- data.frame(read.csv("Simulation functions/arg_list_sig.csv",header = TRUE, fileEncoding="UTF-8-BOM"))
+=======
+parlist <- data.frame(read.csv("Simulation functions/arg_list.csv",header = TRUE, fileEncoding="UTF-8-BOM"))
+>>>>>>> 25f81299ab12c62ec86c11e21e5026c2fab2baa6:Simulation functions/June2022_sims.R
 
  
 
@@ -63,7 +67,11 @@ sim1 <- simulation_func(args_list, B = 5, ebreg_I = FALSE, verbose = TRUE)
 
 ### Run for continuous predictors with M=2500 for B=3 iterations with ebreg
 bin = TRUE
+<<<<<<< HEAD:Simulation functions/May2023_sims.R
 par_num <- 23 
+=======
+par_num <- 24 
+>>>>>>> 25f81299ab12c62ec86c11e21e5026c2fab2baa6:Simulation functions/June2022_sims.R
 parlist[parlist$bin == bin,][par_num,]
 args_list <- parlist[parlist$bin == bin,][par_num,]
 sim1 <- simulation_func(args_list, B = 3, ebreg_I = TRUE, verbose = TRUE)
