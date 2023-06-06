@@ -1,7 +1,7 @@
 # probe application with CCLE data for all methods except conformal
 # Jackknife, which was ran separately due it's computational demand.
 #
-# This function runs 6 analysis methods (UNHIDEM, MCP, SCAD, LASSO
+# This function runs 6 analysis methods (PROBE, MCP, SCAD, LASSO
 # ALASSO (adaptive LASSO) and LASSO with the conformal split method),
 # 8 drugs and 10 folds (all together 480 analyses).  It takes about
 # 2.5-3 hours to run. The results have been saved in the file:
@@ -31,8 +31,8 @@ y_data <- y_data[, colSums(apply(y_data, 2, is.na))==0]
 
 #Prepare objects to store results
 nfolds <- 10
-mspe = mad <- array(numeric(), dim = c(nfolds, ncol(y_data), 9))
-pred_data <- array(numeric(), dim = c(nrow(y_data), ncol(y_data), 9)) 
+mspe = mad <- array(numeric(), dim = c(nfolds, ncol(y_data), 10))
+pred_data <- array(numeric(), dim = c(nrow(y_data), ncol(y_data), 10)) 
 test_data <- array(numeric(), dim = c(nrow(y_data), ncol(y_data))) 
 ecp       <- array(numeric(), dim = c(nrow(y_data), ncol(y_data), 2))
 PI_len    <- array(numeric(), dim = c(nrow(y_data), ncol(y_data), 2)) 
@@ -82,6 +82,7 @@ for(i in 1:ncol(y_data)) {
                              Y_test < pred_res_test$PI_U) )
     t_len <- c( t_len, pred_res_test$PI_U - pred_res_test$PI_L)
     
+    
     #MCP AND SCAD SECTION
     cat("MCP-SCAD, ")
     X <- X
@@ -126,6 +127,21 @@ for(i in 1:ncol(y_data)) {
     
     lasso_coefs <- coef(cv.out_lasso,s="lambda.min")[-1]
     lasso_M1 <- length(lasso_coefs[lasso_coefs!=0])
+    update_order = order(abs(lasso_coefs), decreasing = TRUE)
+    
+    #Probe_one SECTION
+    cat("Probe-one, ")
+    results <- probe_one(Y = Y, X = X, verbose = TRUE, 
+                         order.method = "none",
+                         update_order = update_order, 
+                         beta_start = lasso_coefs)
+    
+    pred_res_test_one <- predict_probe_func(results, X = X_test, alpha = alpha)
+    yhat_probe_one <- pred_res_test_one$Pred
+    
+    
+    mspe[j,i,10] <- mean( (Y_test - yhat_probe_one)^2 )
+    mad[j,i,10] <- median( abs(Y_test - yhat_probe_one) )
     
     #LASSO SPLIT CONFORMAL SECTION
     cat("Conformal Split, ")
@@ -179,7 +195,7 @@ for(i in 1:ncol(y_data)) {
     t_pred_data <- rbind( t_pred_data, cbind(yhat_probe, yhat_mcp, 
                                              yhat_scad, yhat_lasso, yhat_alasso, 
                                              yhat_lasso_conf, yhat_varbvs, yhat_sslasso, 
-                                             yhat_sparsevb) )
+                                             yhat_sparsevb, yhat_probe_one) )
     print(round(mspe[j,i,],3))
     print(round(mad[j,i,],3))
   }
