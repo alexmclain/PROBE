@@ -1,5 +1,5 @@
 
-library(RandomFields)
+require(geoR)
 
 
 
@@ -12,7 +12,6 @@ simulation_func <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641)
   M <- NUM^2
   M1 <- as.integer(M*as.numeric(args_list[2]))
   p <- 1-as.numeric(args_list[2])
-  err_sd <- 0.75
   alpha <- 0.05
   eta <-   as.numeric(args_list[3]) #Eta value
   eta_var <- (eta*sqrt(pi)/sqrt(2))^2
@@ -21,61 +20,57 @@ simulation_func <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641)
   bin <- as.logical(args_list[6])
   lat_sp <- 10
   sig_sp <- 20
-  lat_data <- 0
   adj <- 10
-  RFoptions(spConform=FALSE)
-  
-  ### First run is required so the seed works appropriately (bug in RandomFields package).
-  data <- sim_bin_LR_2(lat_data,err_sd, x, 1,M,M1,sig_sp,lat_sp,eta_var,seed = 238476 )
+
   
   ## Initializing data outputs
   PROBE_res <- matrix(0,K,13)
   colnames(PROBE_res) <- c("Sum_delta", "Sum_delta_sig", "MSE", "MAD", "ECP_PI", 
-                             "ECP_CI", "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", "Beta_err", 
+                             "ECP_CI", "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", "Beta_mse", 
                              "Conv", "time")
   PROBE_one_res <- matrix(0,K,11)
   colnames(PROBE_one_res) <- paste0("probe_one_",c("Sum_delta", "Sum_delta_sig", "MSE", "MAD", 
                                                    "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", 
-                                                   "Beta_err", "Conv", "time"))
+                                                   "Beta_mse", "Conv", "time"))
   
   varbvs_res <- SSLASSO_res <- sparsevb_res <- sparsevb_c_res <- matrix(-999,K,8)
   LASSO_res <- adap_LASSO_res <- SCAD_res <- MCP_res <- matrix(-999,K,8)
   ebreg_res <- matrix(-999,K,9)
   
   colnames(varbvs_res) <- c("Varbvs_Signals", "Varbvs_Corr_Signals", "Varbvs_MSE", "Varbvs_MAD", 
-                            "Varbvs_Test_MSPE", "Varbvs_Test_MSE", "Varbvs_Beta_err", "Varbvs_time")
+                            "Varbvs_Test_MSPE", "Varbvs_Test_MSE", "Varbvs_Beta_mse", "Varbvs_time")
   
   colnames(sparsevb_res) <- c("sparsevb_Signals", "sparsevb_Corr_Signals", "sparsevb_MSE", 
                               "sparsevb_MAD", "sparsevb_Test_MSPE", "sparsevb_Test_MSE", 
-                              "sparsevb_Beta_err", "sparsevb_time")
+                              "sparsevb_Beta_mse", "sparsevb_time")
   
   colnames(sparsevb_c_res) <- c("sparsevb_c_Signals", "sparsevb_c_Corr_Signals", "sparsevb_c_MSE", 
                                 "sparsevb_c_MAD", "sparsevb_c_Test_MSPE", "sparsevb_c_Test_MSE", 
-                                "sparsevb_c_Beta_err", "sparsevb_c_time")
+                                "sparsevb_c_Beta_mse", "sparsevb_c_time")
   
   colnames(SSLASSO_res) <- c("SSLASSO_Signals", "SSLASSO_Corr_Signals", "SSLASSO_MSE", "SSLASSO_MAD", 
-                             "SSLASSO_Test_MSPE", "SSLASSO_Test_MSE", "SSLASSO_Beta_err", 
+                             "SSLASSO_Test_MSPE", "SSLASSO_Test_MSE", "SSLASSO_Beta_mse", 
                              "SSLASSO_time")
   
   colnames(ebreg_res) <- c("ebreg_Signals", "ebreg_Corr_Signals", "ebreg_res_MSE", "ebreg_MAD", 
-                           "ebreg_Test_MSPE", "ebreg_Test_MSE", "ebreg_Beta_err", "ebreg_ECP_PI",
+                           "ebreg_Test_MSPE", "ebreg_Test_MSE", "ebreg_Beta_mse", "ebreg_ECP_PI",
                            "ebreg_time")
   
   colnames(LASSO_res) <- c("lasso_Sum_delta","lasso_Sum_delta_sig", 
                            "lasso_MSE", "lasso_MAD", 
-                           "lasso_Obs_test_MSPE", "lasso_test_MSE", "lasso_Beta_err", "lasso_time")
+                           "lasso_Obs_test_MSPE", "lasso_test_MSE", "lasso_Beta_mse", "lasso_time")
   
   colnames(adap_LASSO_res) <- c("adap_lasso_Sum_delta","adap_lasso_Sum_delta_sig", 
                                 "adap_lasso_MSE", "adap_lasso_MAD", 
                                 "adap_lasso_Obs_test_MSPE", "adap_lasso_test_MSE", 
-                                "adap_lasso_Beta_err", "adap_lasso_time")
+                                "adap_lasso_Beta_mse", "adap_lasso_time")
   
   colnames(SCAD_res) <- c("SCAD_Sum_delta","SCAD_Sum_delta_sig", 
                           "SCAD_MSE", "SCAD_MAD", 
-                          "SCAD_Obs_test_MSPE", "SCAD_test_MSE", "SCAD_Beta_err", "SCAD_time")
+                          "SCAD_Obs_test_MSPE", "SCAD_test_MSE", "SCAD_Beta_mse", "SCAD_time")
   colnames(MCP_res) <- c("MCP_Sum_delta","MCP_Sum_delta_sig", 
                          "MCP_MSE", "MCP_MAD", 
-                         "MCP_Obs_test_MSPE", "MCP_test_MSE", "MCP_Beta_err", "MCP_time")
+                         "MCP_Obs_test_MSPE", "MCP_test_MSE", "MCP_Beta_mse", "MCP_time")
   
   if(!ebreg_I){ebreg_res <- NULL}
   ## Set convergence criteria
@@ -92,19 +87,20 @@ simulation_func <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641)
     
     # Generate X and Signal Data
     
+    cat("Generating data for iteration",k,"\n")
     set.seed(seed + k)
-    data <- sim_bin_LR_2(lat_data,err_sd,x,N,M,M1,sig_sp,lat_sp,eta_var,seed = seed + k)
+    data <- sim_bin_LR_2(x,N,M,M1,sig_sp,lat_sp,eta_var,seed = seed + k)
     
     #Signal and beta coefficients
     signal <- data$signal
     sig_ind <- data$sig_ind
-    t_eta <-  runif(M, 0, 2*eta)# data$eta#
-    LP_data <- expand.grid(x1=x,x2=x)
+    t_eta <-  runif(M, 0, 2*eta)# 
+    LP_data <- data$LP_data
     LP_data$signal <- sig_ind
     LP_data$Signal <- factor((LP_data$signal-1))
     
     #X data
-    if(bin){X <- matrix(t(data$X), nrow = N, ncol = M, byrow = TRUE)}else{X <- data$X_cont}
+    if(bin){X <- matrix(t(data$X), N, M)}else{X <- t(data$X_cont)}
     
     # Generate outcome
     eta_vec <- sig_ind*array(t_eta)
@@ -112,17 +108,17 @@ simulation_func <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641)
     Y <- eta_i + rnorm(N,0,sigma)
     
     # Generate Test Data
-    set.seed(seed + k + 12321)
-    t_data <- RFsimulate(model = RMstable(alpha = 2, scale = lat_sp,var = 1), x=x, y=x,grid=TRUE,n=N)
-    t_datamat <- t(matrix(array(t_data),M,N))+rnorm(N)*err_sd
+    t_datamat <- t(data$test_data)
     if(bin){
-      X_test <- matrix(1*I(t(t(t_datamat)+c(array(lat_data))) < 0), N, M)
+      X_test <- matrix(1*I(t_datamat < 0), N, M)
     }else{
-      X_test <- t(t(t_datamat)+c(array(lat_data))) 
+      X_test <- t_datamat
     }
     eta_test <- apply(t(X_test)*c(eta_vec),2,sum)
     Y_test <- eta_test + rnorm(N,0,sigma)
     
+    
+    cat("Fitting model for iteration",k,"\n")
     #### all-at-once probe
     test3 <- system.time(mod.out <- probe(Y = Y, X = X, 
                                           adj = adj))
@@ -272,7 +268,8 @@ simulation_func <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641)
     
     #### SSLASSO
     L <- 400
-    test3 <- system.time(t1 <- try(mod.out <- SSLASSO(X=X, y=Y, variance = "unknown", lambda1 = 0.01, 
+    test3 <- system.time(t1 <- try(mod.out <- SSLASSO(X = X, y=Y, 
+                                                      variance = "unknown", lambda1 = 0.01, 
                                                       lambda0 = seq(0.01,M,length.out=L), 
                                                       a = M1, b = M-M1), silent = TRUE))
     if(attr(t1,"class") == "SSLASSO"){
@@ -395,7 +392,7 @@ simulation_func <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641)
     if(verbose){
       print(round(c(PROBE_res[k,c(5:8)],PROBE_one_res[k,6]),3))
       if(ebreg_I){print(round(ebreg_res[k,8],3))}
-      print(k_res)
+      print(k_res[,-c(1:2)])
     }
   }
   
@@ -447,28 +444,47 @@ simulation_func <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641)
 }
 
 
-
-sim_bin_LR_2 <- function(lat_data, err_sd, x, N, M, M1, sig_sp, lat_sp, eta_var, 
+sim_bin_LR_2 <- function(x, N, M, M1, sig_sp, lat_sp, eta_var, 
                          seed=NULL){
   
   if(is.null(seed)){seed = 238476}
   set.seed(seed)
-  x1 <- x2 <- 1:as.integer(sqrt(M))
-  signal_data <- RFsimulate(model = RMstable(alpha = 2, scale = sig_sp),x=x1,y=x2,grid=TRUE,n=1)
+  LP_data <- expand.grid(x1=x,
+                         x2=x)
+  D <- as.integer(sqrt(M))
+  if(D>50){
+    t_data <- grf(n = D^2, grid = "reg", nsim = 2*N+1,
+                  xlims = c(1,D),
+                  ylims = c(1,D), 
+                  cov.model = "gaussian", 
+                  cov.pars = c(1,lat_sp), 
+                  messages = FALSE, method = "svd")$data
+    signal_data <- t_data[,1]
+    test_data <- t_data[,(N+2):ncol(t_data)]
+    t_data <- t_data[,2:(N+1)]
+  }else{
+    signal_data <- grf(n = D^2, grid = "reg", nsim = 1, 
+                       xlims = c(1,D),
+                       ylims = c(1,D), 
+                       cov.model = "gaussian", 
+                       cov.pars = c(1,sig_sp), 
+                       messages = FALSE, method = "svd")$data
+    
+    t_data <- grf(n = D^2, grid = "reg", nsim = 2*N,
+                  xlims = c(1,D),
+                  ylims = c(1,D), 
+                  cov.model = "gaussian", 
+                  cov.pars = c(1,lat_sp), 
+                  messages = FALSE, method = "svd")$data
+    test_data <- t_data[,(N+1):ncol(t_data)]
+    t_data <- t_data[,1:N]
+  }
   
   quan <- quantile(array(signal_data),prob = 1-M1/M)
   signal_data <- 1*I(array(signal_data)>=quan)
-  
-  LP_data <- expand.grid(x1=x1,x2=x2)
   LP_data$signal     <- as.integer(signal_data)+1
-  RE_eff <- rnorm(N)
   
-  t_eta <- RFsimulate(model = RMstable(alpha = 2, scale = sig_sp,var = eta_var), x=x, y=x,grid=TRUE,n=1)
-  t_data <- RFsimulate(model = RMstable(alpha = 2, scale = lat_sp,var = 1), x=x, y=x,grid=TRUE,n=N)
-  
-  RE_eff <- rnorm(N)
-  t_datamat <- t(matrix(array(t_data),M,N))+RE_eff*err_sd
-  X_cont <- t(t(t_datamat)+c(array(lat_data)))
+  X_cont <- t_data
   X <- 1*I(X_cont < 0)
   
   signal<- seq(1,M,1)[LP_data$signal==2]
@@ -476,7 +492,11 @@ sim_bin_LR_2 <- function(lat_data, err_sd, x, N, M, M1, sig_sp, lat_sp, eta_var,
   sig_ind[signal] <- 1
   
   
-  return(list(LP_data=LP_data,X=X, X_cont = X_cont,RE_eff=RE_eff,eta = t_eta,signal=signal,sig_ind=sig_ind))
+  return(list(LP_data = LP_data, X = X, 
+              X_cont = X_cont, 
+              test_data = test_data,
+              signal = signal, 
+              sig_ind = sig_ind))
 }
 
 
@@ -525,31 +545,5 @@ MCP_func <- function(Y,X,N,M){
   cv.out3
 }
 
-sim_spat <- function(C, err_sd, beta0, N, M, M1, sig_sp, lat_sp, eta_var, 
-                     seed=NULL){
-  
-  if(!is.null(seed)){set.seed(seed)}
-  x1 <- x2 <- 1:as.integer(sqrt(M))
-  signal_data <- RFsimulate(model = RMstable(alpha = 2, scale = sig_sp),x=x1,y=x2,grid=TRUE,n=1)
-  quan <- quantile(array(signal_data),prob = 1-M1/M)
-  signal_data <- 1*I(array(signal_data)>=quan)
-  
-  LP_data <- expand.grid(x1=x1,x2=x2)
-  LP_data$signal     <- as.integer(signal_data)+1
-  RE_eff <- rnorm(N)
-  
-  t_eta <- RFsimulate(model = RMstable(alpha = 2, scale = sig_sp,var = eta_var), x=x, y=x,grid=TRUE,n=1)
-  t_data <- RFsimulate(model = RMstable(alpha = 2, scale = lat_sp,var = C^2), x=x, y=x,grid=TRUE,n=N)
-  
-  RE_eff <- rnorm(N)
-  X <- t(matrix(array(t_data),M,N))+RE_eff*err_sd
-  
-  signal<- seq(1,M,1)[LP_data$signal==2]
-  sig_ind <- rep(0,M)
-  sig_ind[signal] <- 1
-  
-  
-  return(list(LP_data=LP_data,X=X,RE_eff=RE_eff,eta = t_eta,signal=signal,sig_ind=sig_ind))
-}
 
 

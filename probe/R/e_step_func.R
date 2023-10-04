@@ -118,7 +118,7 @@ lfdr_t_func <- function (T, pi0 = NULL, trunc = TRUE, monotone = TRUE, adj=3,
   f <- list(x=sort(T),y=lfdr[order(T)])
   
   adj_warning = 0
-  if(any(max_d > max_n*1.1)){
+  if(any(max_d > max_n*1.25)){
     adj_warning = 1
   }
   res <- list(lfdr = lfdr_out, f = f, 
