@@ -64,7 +64,9 @@ Load the package and the data.
 ``` r
 library(probe)
 data(Sim_data)
+data(Sim_data_test)
 attach(Sim_data) 
+attach(Sim_data_test) 
 M <- dim(X)[2] 
 M1 <- length(signal) 
 ```
