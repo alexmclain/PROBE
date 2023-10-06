@@ -82,14 +82,6 @@ Here, **Sim_data** contains the following elements:
 
 where $n=400$, $M=10000$ and $M_1=100$.
 
-Set convergence criteria, alpha, and plot indicator:
-
-``` r
-ep <- 0.01
-alpha <- 0.05
-plot_ind <- TRUE
-```
-
 In this first run of the analysis we include the true signal
 ($\eta_i= X_i \beta$) and indices of the non-null beta coefficients
 (signal). This information will be used to create a plot of the MSE and
@@ -98,8 +90,8 @@ by iteration ($t$).
 
 ``` r
 eta_i <- apply(t(X)*beta_tr,2,sum) 
-full_res <- probe( Y = Y, X = X, alpha = alpha, ep = ep, plot_ind = 
-                       plot_ind, eta_i = eta_i, signal = signal)
+full_res <- probe( Y = Y, X = X, plot_ind = TRUE, 
+                   eta_i = eta_i, signal = signal)
 ```
 
 An example of performing prediction (of training data).
@@ -109,8 +101,22 @@ pred_res <- predict_probe_func( full_res, X = X, alpha = alpha)
 head(pred_res)
 ```
 
-How the credible and prediction intervals are constructed is discussed
-in (Zgodic et al. 2023).
+How prediction intervals are constructed is discussed in Zgodic et al.
+(2023).
+
+<!-- Applying multiple testing corrections to results -->
+<!-- ```{r, eval=FALSE} -->
+<!-- E_step_final <- full_res$E_step -->
+<!-- MT_res <- mtr_func(E_step_final, alpha, signal) -->
+<!-- ``` -->
+<!-- Summary of multiple testing methods: -->
+<!-- ```{r, eval=FALSE} -->
+<!-- MT_res$Bonf_sum -->
+<!-- MT_res$BH_sum -->
+<!-- ## Confusion matrix for BH procedure -->
+<!-- table((1:M %in% signal),MT_res$BH_res$BH) -->
+<!-- ``` -->
+<!-- (note: the ability of PROBE to appropriately control the FDR has not been studied). -->
 
 ### Re-run with test data
 
@@ -139,8 +145,8 @@ data does not select the number of iterations (the algorithm stops once
 the convergence criteria is met).
 
 ``` r
-full_res <- probe( Y = Y, X = X, alpha = alpha, ep = ep, plot_ind = 
-                       plot_ind, Y_test = Y_test, X_test = X_test)
+full_res <- probe( Y = Y, X = X, plot_ind = TRUE, 
+                   Y_test = Y_test, X_test = X_test)
 ```
 
 Predict for the test observations
@@ -154,13 +160,10 @@ eta_test <- apply(t(X_test)*beta_tr,2,sum)
 plot(pred_res_test$Pred, eta_test)
 ```
 
-Proportion of test CIs and PIs that contain the true signal and the
-(unobserved) test observation, respectively.
+Proportion of test PIs that contain the true signal.
 
 ``` r
-ecp_CI <- mean(1*I(eta_test>pred_res_test$CI_L & eta_test<pred_res_test$CI_U))
-ecp_PI <- mean(1*I(Y_test>pred_res_test$PI_L & Y_test<pred_res_test$PI_U))
-c(ecp_CI, ecp_PI)
+(ecp_PI <- mean(1*I(Y_test>pred_res_test$PI_L & Y_test<pred_res_test$PI_U)))
 detach(Sim_data)
 ```
 
@@ -175,7 +178,7 @@ but this time additional covariates that are not subjected to the
 
 $$Y_i = \mu +  X_i \beta + Z_i \beta_Z + \epsilon$$
 
-where $X$ has dimension $M \gg n$ and $Z$ has dimension $p<n$ (here
+where $X$ has dimension $M \gg n$ and $Z$ has dimension $p < n$ (here
 $p=2$). How non-sparse covariates are brought into the model is
 discussed in Zgodic et al. (2023).
 
@@ -206,8 +209,8 @@ In this analysis we include $\eta_i$ and **signal** for plotting
 purposes.
 
 ``` r
-full_res <- probe(Y = Y, X = X, Z = Z, alpha = alpha, ep = ep, plot_ind 
-                    = plot_ind, eta_i = eta_i, signal = signal)
+full_res <- probe(Y = Y, X = X, Z = Z, plot_ind = TRUE, 
+                  eta_i = eta_i, signal = signal)
 ```
 
 Total number of iterations
