@@ -41,7 +41,9 @@
 #' @examples
 #' ### Example
 #' data(Sim_data)
+#' data(Sim_data_test)
 #' attach(Sim_data)
+#' attach(Sim_data_test)
 #' plot_ind <- TRUE
 #' adj <- 10
 #' 

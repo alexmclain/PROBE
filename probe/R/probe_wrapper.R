@@ -39,7 +39,9 @@
 #' @examples
 #' ### Example
 #' data(Sim_data)
+#' data(Sim_data_test)
 #' attach(Sim_data)
+#' attach(Sim_data_test)
 #' alpha <- 0.05
 #' plot_ind <- TRUE
 #' adj <- 10
@@ -67,19 +69,18 @@
 #' 
 #' ### Example with additional covariate data Z (not subjected to the sparsity assumption)
 #' data(Sim_data_cov)
-#' attach(Sim_data_cov)
 #' 
 #' # Calculating the true signal (the impact of X only)
-#' eta_i <- apply(t(X)*beta_tr,2,sum) 
-#' # Run the analysis. eta_i (true signal) and signal are included for plotting purposes only.
-#' full_res <- probe( Y = Y, X = X, Z = Z, signal = signal, 
-#' eta_i  = eta_i, alpha = alpha, plot_ind = plot_ind, adj = adj)
-#' 
+#' eta_i <- apply(t(Sim_data_cov$X)*Sim_data_cov$beta_tr,2,sum) 
+#  # Run the analysis. eta_i (true signal) and signal are included for plotting purposes only.
+#' full_res <- probe( Y = Sim_data_cov$Y, X = Sim_data_cov$X, Z = Sim_data_cov$Z, 
+#'                   alpha = alpha, plot_ind = plot_ind, signal = signal, eta_i  = eta_i)
+#'                    
 #' # Final estimates of the impact of X versus the true values:
-#' data.frame(true_values = beta_X_tr, full_res$Calb_mod$res_data[-2,])
+#' data.frame(true_values = Sim_data_cov$beta_X_tr, full_res$Calb_mod$res_data[-2,])
 #' 
-#' #Compare to a standard linear model of X on Y:
-#' summary(lm(Y~Z$Cont_cov + Z$Binary_cov))$coefficients
+#' # Compare to a standard linear model of X on Y:
+#' summary(lm(Y~Sim_data_cov$Z$Cont_cov + Sim_data_cov$Z$Binary_cov))$coefficients
 #' 
 #' 
 #' @export
