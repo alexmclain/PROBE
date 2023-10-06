@@ -77,7 +77,7 @@
 #'                   alpha = alpha, plot_ind = plot_ind, signal = signal, eta_i  = eta_i)
 #'                    
 #' # Final estimates of the impact of X versus the true values:
-#' data.frame(true_values = Sim_data_cov$beta_X_tr, full_res$Calb_mod$res_data[-2,])
+#' data.frame(true_values = Sim_data_cov$beta_Z_tr, full_res$Calb_mod$res_data[-2,])
 #' 
 #' # Compare to a standard linear model of X on Y:
 #' summary(lm(Y~Sim_data_cov$Z$Cont_cov + Sim_data_cov$Z$Binary_cov))$coefficients
