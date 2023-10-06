@@ -64,9 +64,7 @@ Load the package and the data.
 ``` r
 library(probe)
 data(Sim_data)
-data(Sim_data_test)
 attach(Sim_data) 
-attach(Sim_data_test) 
 M <- dim(X)[2] 
 M1 <- length(signal) 
 ```
@@ -77,18 +75,28 @@ Here, **Sim_data** contains the following elements:
 - **X**:
   ![n \times M](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;n%20%5Ctimes%20M "n \times M")
   covariate matrix for the training set,
-- **beta_tr**: true value of beta coefficients,
+- **beta_tr**: true value of beta coefficients, and
 - **signal**: indicies of the
   ![M_1](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;M_1 "M_1")
-  non-null predictors,
-- **Y_test**: outcome variable for the test set, and
-- **X_test**: covariate matrix for the test set
+  non-null predictors
 
 where
 ![n=400](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;n%3D400 "n=400"),
 ![M=10000](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;M%3D10000 "M=10000")
 and
 ![M_1=100](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;M_1%3D100 "M_1=100").
+
+Load in some test data.
+
+``` r
+data(Sim_data_test)
+attach(Sim_data_test) 
+```
+
+Here, **Sim_data_test** contains the following elements:
+
+- **Y_test**: outcome variable for the test set, and
+- **X_test**: covariate matrix for the test set
 
 Set convergence criteria, alpha, and plot indicator:
 
