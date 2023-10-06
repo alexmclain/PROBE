@@ -4,9 +4,9 @@
 \name{probe-package}
 \alias{probe-package}
 \alias{_PACKAGE}
-\title{probe: Sparse high-dimensional linear regression with a PaRtitiOned empirical Bayes Ecm (PROBE) algorithm}
+\title{probe: Sparse High-Dimensional Linear Regression with a PaRtitiOned Empirical Bayes Ecm (PROBE) Algorithm}
 \description{
-This package contains functions to fit an efficient and powerful Bayesian approach for sparse high-dimensional linear regression. Minimal prior assumptions on the parameters are used through the use of plug-in empirical Bayes estimates of hyperparameters. Efficient maximum a posteriori (MAP) estimation is completed through a Parameter-Expanded Expectation-Conditional-Maximization (PX-ECM) algorithm. The PX-ECM results in a robust computationally efficient coordinate-wise optimization, which adjusts for the impact of other predictor variables. The completion of the E-step uses an approach motivated by the popular two-groups approach to multiple testing. The result is a PaRtitiOned empirical Bayes Ecm (PROBE) algorithm applied to sparse high-dimensional linear regression, which can be completed using one-at-a-time or all-at-once type optimization.
+Implements an efficient and powerful Bayesian approach for sparse high-dimensional linear regression. They assume minimal prior assumptions on the parameters through plug-in empirical Bayes estimates of hyperparameters. An efficient Parameter-Expanded Expectation-Conditional-Maximization (PX-ECM) algorithm estimates maximum a posteriori (MAP) values of regression parameters and variable selection probabilities. The PX-ECM results in a robust computationally efficient coordinate-wise optimization, which adjusts for the impact of other predictor variables. The E-step is motivated by the popular two-group approach to multiple testing. The result is a PaRtitiOned empirical Bayes Ecm (PROBE) algorithm applied to sparse high-dimensional linear regression, implemented using one-at-a-time or all-at-once type optimization. Simulation studies found the all-at-once variant to be superior.
 }
 \details{
 Examples for applying PROBE to sparse high-dimensional linear regression are given
@@ -23,11 +23,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Alexander McLain \email{mclaina@mailbox.sc.edu}
+\strong{Maintainer}: Alexander McLain \email{mclaina@mailbox.sc.edu} (\href{https://orcid.org/0000-0002-5475-0670}{ORCID})
 
 Authors:
 \itemize{
-  \item Anja Zodiac
+  \item Anja Zodiac [contributor]
 }
 
 }
