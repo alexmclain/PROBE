@@ -161,14 +161,13 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
     
     if (sum(gamma) == 0) {
       if(try2 == 0){
-        cat("Warning loop completely recycled back to beta=0. 
+        warning("algorithm recycled back to null gamma values.\n 
             Trying again with different starting values. \n")
         rcy_ct <- count
-        count <- 0
         beta_t <- rep(1e-5,M)
         gamma <- rep(1,M)   
         T_vals <- NULL
-        Xt_conv1 <- try2 <- 1
+        count <- try2 <- Xt_conv1 <- 1 
       } else {
         E_step$beta_tilde <-  beta_t_old
         E_step$gamma <-  gamma_old
@@ -217,10 +216,38 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
     }
     
     # Outputting results if verbose=TRUE
-    if (( (count %% 100) == 0 | conv_check == 1) & verbose) {
-      if(count !=0){
-        report_func(count, E_step, MTR_res, Xt_conv1, signal_track, 
-                    report_pred)
+    if ((count %% 100) == 0 | conv_check == 1) {
+      if(verbose){
+        CC_round <- signif(Xt_conv1, 2)
+        if (is.null(signal_track)) {
+          disc <- sum(MTR_res$BH_res$LFDR)
+          if (!is.null(report_pred)) {
+            if (report_pred <= 1) {
+              report_pred <- signif(report_pred, 3)
+            }
+            if (report_pred > 1) {
+              report_pred <- round(report_pred, 1)
+            }      
+            message("Iteration=", count, "Number of discoveries (using lfdr)=", 
+                    disc, "Sum(gamma)=", round(sum(E_step$gamma), 1), " MSPE(test)=", 
+                    report_pred, "Convergence Crit=", CC_round, "\n")
+          } else {
+            message("Iteration=", count, "Number of discoveries (using lfdr)=", 
+                    disc, "Sum(gamma)=", round(sum(E_step$gamma), 1), "Convergence Crit=", 
+                    CC_round, "\n")
+          }
+        } else {
+          if (report_pred <= 1) {
+            report_pred <- signif(report_pred, 3)
+          }
+          if (report_pred > 1) {
+            report_pred <- round(report_pred, 1)
+          }
+          message("Iteration=", count, " Hyp testing (using lfdr) TP=", signal_track[3], 
+                  " FP=", signal_track[1], " TN=", signal_track[2]-signal_track[4], " FN=", signal_track[4], 
+                  " MSE(signal)=", report_pred, " Convergence Crit=", CC_round, 
+                  "\n", sep = "")
+        }
       }
     }
     # Storing iteration data
@@ -254,17 +281,19 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
   conv <- 0
   if (conv_check == 0 & try2 < 2) {
     conv <- 1
-    cat("Warning: convergence criteria not met. Set different convergence criteria or 
+    warning("convergence criteria not met. Set different convergence criteria or 
         raise maximum number of iterations.\n")
   }
   if (try2 == 2) {
     conv <- 2
-    cat("Warning: loop completely recycled back to beta=gamma=0 twice. Optimization failed.\n")
+    warning("algorithm recycled back to null values twice. Optimization failed.\n")
   }
   
   if(E_step$adj_warning != 0){
-    cat("Warning: results indicate bandwidth in density estimation \n may be too narrow, consider raising 'adj'. \n")
+    message(paste0("Results indicate bandwidth in density estimation may be \n 
+            too narrow, consider raising 'adj'. Current adj=",adj))
   }
+  
   
   M_step <- LR_update
   Seq_test <- NULL
@@ -284,15 +313,10 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
   # data is given
   if (plot_ind & !is.null(plot_dat)) {
     if (is.null(report_pred)) {
-      cat("Warning: cannot plot without eta_i or test data.\n")
+      warning("cannot plot without true mean or test data.\n")
     } else {
       plot_probe_func(full_res, test_plot = !is.null(Y_test), alpha = alpha, signal = signal)
     }
-  }
-  
-  if (conv_check == 0) {
-    cat("Warning: convergence criteria not met. Set different convergence criteria or 
-        raise maximum number of iterations.\n")
   }
   
   
@@ -359,7 +383,6 @@ plot_probe_func <- function(full_res, test_plot, alpha, signal) {
   L_pred <- plot_dat$Pred_err[length(plot_dat$Pred_err)]
   a <- max(c(a, b + (L_pred-b)*5/3 ))
   
-  par(mar = c(4.2, 4.5, 0.5, 4.5), mfrow = c(1, 1))
   ylab_val <- expression(paste("Signal  ", MSE[t]))
   if (test_plot) {
     ylab_val <- expression(paste("Test  ", MSPE[t]))
@@ -405,38 +428,5 @@ plot_probe_func <- function(full_res, test_plot, alpha, signal) {
   
 }
 
-report_func <- function(count, E_step, MTR_res, Xt_conv1, signal_track, 
-                        report_pred) {
-  
-  CC_round <- signif(Xt_conv1, 2)
-  if (is.null(signal_track)) {
-    disc <- sum(MTR_res$BH_res$LFDR)
-    if (!is.null(report_pred)) {
-      if (report_pred <= 1) {
-        report_pred <- signif(report_pred, 3)
-      }
-      if (report_pred > 1) {
-        report_pred <- round(report_pred, 1)
-      }      
-      cat("Iteration=", count, "Number of discoveries (using lfdr)=", 
-          disc, "Sum(gamma)=", round(sum(E_step$gamma), 1), " MSPE(test)=", 
-          report_pred, "Convergence Crit=", CC_round, "\n")
-    } else {
-      cat("Iteration=", count, "Number of discoveries (using lfdr)=", 
-          disc, "Sum(gamma)=", round(sum(E_step$gamma), 1), "Convergence Crit=", 
-          CC_round, "\n")
-    }
-  } else {
-    if (report_pred <= 1) {
-      report_pred <- signif(report_pred, 3)
-    }
-    if (report_pred > 1) {
-      report_pred <- round(report_pred, 1)
-    }
-    cat("Iteration=", count, " Hyp testing (using lfdr) TP=", signal_track[3], 
-        " FP=", signal_track[1], " TN=", signal_track[2]-signal_track[4], " FN=", signal_track[4], 
-        " MSE(signal)=", report_pred, " Convergence Crit=", CC_round, 
-        "\n", sep = "")
-  }
-}
+
 

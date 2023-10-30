@@ -21,6 +21,7 @@
 #' @param delta Learning rate for iteration t is (1 + t)^(-1 + delta) (default delta = 0.4).
 #' @param update_order Manual value for the updating order for when \code{order.method = "none"} is used.
 #' @param beta_start Manual value for the starting beta coefficients for when \code{order.method = "none"} is used.  
+#' @param seed Seed value to ensure reproducibility when \code{order.method = "lasso"}, \code{order.method = "ridge"}, or \code{order.method = "random"}. 
 #' @return A list including 
 #' 
 #' \code{beta_ast_hat} MAP estimates of the regression coefficients (\eqn{\beta^\ast}),
@@ -274,10 +275,38 @@ probe_func_one <- function(Y, X, alpha, verbose = TRUE, signal, maxit = 1000,
     }
     
     # Outputting results if verbose=TRUE
-    if (( (count %% 100) == 0 | conv_check == 1) & verbose) {
-      if(count !=0){
-        report_func(count, E_step, MTR_res, Xt_conv1, signal_track, 
-                    report_pred)
+    if ((count %% 100) == 0 | conv_check == 1) {
+      if(verbose){
+        CC_round <- signif(Xt_conv1, 2)
+        if (is.null(signal_track)) {
+          disc <- sum(MTR_res$BH_res$LFDR)
+          if (!is.null(report_pred)) {
+            if (report_pred <= 1) {
+              report_pred <- signif(report_pred, 3)
+            }
+            if (report_pred > 1) {
+              report_pred <- round(report_pred, 1)
+            }      
+            message("Iteration=", count, "Number of discoveries (using lfdr)=", 
+                    disc, "Sum(gamma)=", round(sum(E_step$gamma), 1), " MSPE(test)=", 
+                    report_pred, "Convergence Crit=", CC_round, "\n")
+          } else {
+            message("Iteration=", count, "Number of discoveries (using lfdr)=", 
+                    disc, "Sum(gamma)=", round(sum(E_step$gamma), 1), "Convergence Crit=", 
+                    CC_round, "\n")
+          }
+        } else {
+          if (report_pred <= 1) {
+            report_pred <- signif(report_pred, 3)
+          }
+          if (report_pred > 1) {
+            report_pred <- round(report_pred, 1)
+          }
+          message("Iteration=", count, " Hyp testing (using lfdr) TP=", signal_track[3], 
+                  " FP=", signal_track[1], " TN=", signal_track[2]-signal_track[4], " FN=", signal_track[4], 
+                  " MSE(signal)=", report_pred, " Convergence Crit=", CC_round, 
+                  "\n", sep = "")
+        }
       }
     }
     # Storing iteration data

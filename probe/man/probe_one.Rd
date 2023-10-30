@@ -40,6 +40,8 @@ order.method = "lasso", adj = 10, delta = 0.4, update_order= NULL, beta_start= N
 \item{update_order}{Manual value for the updating order for when \code{order.method = "none"} is used.}
 
 \item{beta_start}{Manual value for the starting beta coefficients for when \code{order.method = "none"} is used.}
+
+\item{seed}{Seed value to ensure reproducibility when \code{order.method = "lasso"}, \code{order.method = "ridge"}, or \code{order.method = "random"}.}
 }
 \value{
 A list including 

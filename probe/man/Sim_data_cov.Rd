@@ -21,9 +21,6 @@ This dataset was simulated using a \eqn{100 \times 100} 2-dimensional setting de
 }
 \examples{
 data(Sim_data_cov)
-attach(Sim_data_cov)
-length(Y)
-summary(Z)
-dim(X)
+str(Sim_data_cov)
 }
 \keyword{datasets}
