@@ -23,16 +23,17 @@
 ###   + sparsevb - Spike-and-Slab Variational Bayes
 ###   + ebreg - Empirical Bayes sparse linear regression.
 ###
-### Note: the following uses the geoR package to generate the data, while the
-### simulations in the paper used the the RandomFields package. RandomFields
-### is no longer available on CRAN and has become difficult to load. geoR has
-### the same capabilities and is run with the same parameters, however, it
-### it much much slower. For M=2500 generation of the data takes ~3 min. For
+### Note: the simulations in the paper used the the RandomFields package to 
+### generate the MVN data with squared exponential covariance structure. 
+### RandomFields has since been removed from CRAN and has become difficult to 
+### load. geoR is an alternative package that hassame capabilities and can be 
+### ran with the same parameters, however, it is **much** slower. 
+### For M=2500 generation of the data takes ~3 min and for M=10000
 ### M=10000 generation of the data takes multiple hours (with RandomFields
-### it took minutes).
+### it took around a minute).
 
 remove(list=ls())
-source("Simulation functions/Sim_funcs.R")
+source("Sim_funcs.R")
 library(probe)
 library(glmnet)
 library(sparsevb)
@@ -45,33 +46,35 @@ library(ebreg)
 library(R.utils)
 library(ncvreg)
 library(dplyr)
+library(RandomFields)
+library(geoR) #only needed if RandomFields is not available
 
-parlist <- data.frame(read.csv("Simulation functions/arg_list.csv",header = TRUE, fileEncoding="UTF-8-BOM"))
+parlist <- data.frame(read.csv("arg_list.csv",header = TRUE, fileEncoding="UTF-8-BOM"))
 
 
 ### Run for binary predictors with M=400 for B=10 iterations without ebreg
 bin = TRUE
 par_num <- 13
 args_list <- parlist[parlist$bin == bin,][par_num,]
-sim1 <- simulation_func(args_list, B = 10, ebreg_I = FALSE, verbose = TRUE)
+sim1 <- squared.exp(args_list, B = 10, ebreg_I = FALSE, verbose = TRUE)
 
 ### Run for continuous predictors with M=2500 for B=5 iterations without ebreg
 bin = FALSE
 par_num <- 30 
 parlist[parlist$bin == bin,][par_num,]
 args_list <- parlist[parlist$bin == bin,][par_num,]
-sim1 <- simulation_func(args_list, B = 5, ebreg_I = FALSE)
+sim1 <- squared.exp(args_list, B = 5, ebreg_I = FALSE)
 
 ### Run for continuous predictors with M=2500 for B=3 iterations with ebreg
 bin = TRUE
 par_num <- 24 
 parlist[parlist$bin == bin,][par_num,]
 args_list <- parlist[parlist$bin == bin,][par_num,]
-sim1 <- simulation_func(args_list, B = 3, ebreg_I = TRUE, verbose = TRUE)
+sim1 <- squared.exp(args_list, B = 3, ebreg_I = TRUE, verbose = TRUE)
 
 ### Run for binary predictors with M=10000 for B=5 iterations without ebreg.
 bin = TRUE
 par_num <- 48 
 parlist[parlist$bin == bin,][par_num,]
 args_list <- parlist[parlist$bin == bin,][par_num,]
-sim1 <- simulation_func(args_list, B = 5, ebreg_I = FALSE, verbose = TRUE)
+sim1 <- squared.exp(args_list, B = 5, ebreg_I = FALSE, verbose = TRUE)

@@ -150,7 +150,7 @@ probe_func_one <- function(Y, X, alpha, verbose = TRUE, signal, maxit = 1000,
   CC_count <- 0
   plot_dat <- NULL
   X_2 <- X * X
-  Xt_conv1 <- 1
+  Xt_conv1 <- prev_Xt_conv1 <- 1
   try2 <- 0
   signal_track <- report_pred <- NULL
   tau_s <- 0
@@ -211,7 +211,7 @@ probe_func_one <- function(Y, X, alpha, verbose = TRUE, signal, maxit = 1000,
           beta_var_old <- beta_var_old*0
           gamma <- rep(1,M)   
           T_vals <- NULL
-          Xt_conv1 <- 1 
+          Xt_conv1 <- prev_Xt_conv1 <- 1 
           try2 <- 1
           tau_s <- 1/sigma2
         } else {
@@ -249,12 +249,13 @@ probe_func_one <- function(Y, X, alpha, verbose = TRUE, signal, maxit = 1000,
           Xt_conv1 <- 0
           try2 <- 3
         }
-        if ( Xt_conv1 < ep) {conv_check <- conv_check + 1}
+        if ( max(c(Xt_conv1,prev_Xt_conv1)) < ep) {conv_check <- conv_check + 1}
       }
     }
-    
+    prev_Xt_conv1 <- Xt_conv1
     
     # Getting prediction error if eta_i or test data given.
+    report_pred <- mean((Y - W_ast)^2)
     if (!is.null(eta_i)) {
       report_pred <- mean((eta_i - W_ast)^2)
     }else{
@@ -378,12 +379,6 @@ probe_func_one <- function(Y, X, alpha, verbose = TRUE, signal, maxit = 1000,
       plot_probe_func(full_res, test_plot = !is.null(Y_test), alpha = alpha, signal = signal)
     }
   }
-  
-  if (conv_check == 0) {
-    cat("Warning: convergence criteria not met. Set different convergence criteria or 
-        raise maximum number of iterations.\n")
-  }
-  
   
   return(full_res)
 }

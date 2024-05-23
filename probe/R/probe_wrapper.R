@@ -122,7 +122,7 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
   count <- rcy_ct <- conv_check <- try2 <- 0
   plot_dat <- NULL
   X_2 <- X * X
-  Xt_conv1 <- 1
+  Xt_conv1 <- prev_Xt_conv1 <- 1
   T_vals <- signal_track <- report_pred <- plot_dat <- NULL
   
   while (count < maxit & conv_check < 1) {
@@ -167,7 +167,7 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
         beta_t <- rep(1e-5,M)
         gamma <- rep(1,M)   
         T_vals <- NULL
-        count <- try2 <- Xt_conv1 <- 1 
+        count <- try2 <- Xt_conv1 <- prev_Xt_conv1 <- 1 
       } else {
         E_step$beta_tilde <-  beta_t_old
         E_step$gamma <-  gamma_old
@@ -191,11 +191,13 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
           Xt_conv1 <- pchisq(max((W_ast_old[W_ast2_old>0] - W_ast[W_ast2_old>0])^2 / 
                                    W_ast2_old[W_ast2_old>0])/log(N), df = 1)
         }
-        if ( Xt_conv1 < ep) {conv_check <- conv_check + 1}
+        if ( max(c(Xt_conv1,prev_Xt_conv1)) < ep) {conv_check <- conv_check + 1}
       }
     }
+    prev_Xt_conv1 <- Xt_conv1
     
     # Getting prediction error if eta_i or test data given.
+    report_pred <- mean((Y - Y_pred)^2)
     if (!is.null(eta_i)) {
       report_pred <- mean((eta_i - Y_pred)^2)
     }
