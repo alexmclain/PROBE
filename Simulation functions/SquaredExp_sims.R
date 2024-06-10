@@ -25,12 +25,18 @@
 ###
 ### Note: the simulations in the paper used the the RandomFields package to 
 ### generate the MVN data with squared exponential covariance structure. 
-### RandomFields has since been removed from CRAN and has become difficult to 
-### load. geoR is an alternative package that hassame capabilities and can be 
+### RandomFields has since been removed from CRAN. For Windows machines, 
+### RandomFields and RandomFieldsUtils can be installed from:
+###   - https://cran.r-project.org/web/packages/RandomFields/index.html
+###   - https://cran.r-project.org/web/packages/RandomFieldsUtils/index.html
+### For macOS, RandomFields (and all dependencies) can be installed via macport:
+###   - https://ports.macports.org/port/R-RandomFields/
+### geoR is an alternative package that has the same capabilities and can be 
 ### ran with the same parameters, however, it is **much** slower. 
 ### For M=2500 generation of the data takes ~3 min and for M=10000
 ### M=10000 generation of the data takes multiple hours (with RandomFields
-### it took around a minute).
+### it took around a minute). The simulation code will run when either 
+### RandomFields or geoR is available.
 
 remove(list=ls())
 source("Sim_funcs.R")
