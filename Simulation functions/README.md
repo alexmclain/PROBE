@@ -7,29 +7,7 @@ $$Y_i = \mathbf{X}_i\mathbf{\gamma}\mathbf{\beta} + \mathbf{\epsilon}_i $$
 where $\mathbf{\beta} \sim \mathcal{U}(0,2\eta)$, and
 $\epsilon_i \sim N(0,\sigma^2)$. To generate $\mathbf{X}$ and
 $\mathbf{\gamma}$, we considered (i) squared exponential and (ii)
-grouped block diagonal covariance structures.
-
-For the squared exponential covariance, each $\mathbf{X_m}$ has a two
-dimensional coordinate
-$\mathbf{d}_m = (d_{1m},d_{2m}) \in (1,\ldots,\sqrt{M})^2$; continuous
-and binary $\mathbf{X}$ were considered. For continuous $\mathbf{X}$, we
-used $\mathbf{X}_i \sim^{iid} MVN(0,\Sigma_{s})$ where
-$\Sigma_{s}(\mathbf{d}_m,\mathbf{d}_{m^\prime}) = \exp\{-\lVert (\mathbf{d}_m - \mathbf{d}_{m^\prime})/s \rVert_2^2\}$
-and $s=10$. The binary setting used
-$\mathbf{X}^b_{i} = I( \mathbf{X}_{i}< 0)$ where $I(\cdot)$ denotes the
-indicator function. For $\mathbf{\gamma}$, we set
-$\gamma_m = I\{A_m<Q_{\pi}\}$ where
-$(A_1,\ldots,A_M) \sim MVN(0,\Sigma_{20})$ and $Q_{\pi}$ was such that
-$M_1/M=\pi$. Section C of the Supplementary Materials presents examples
-of $\mathbf{\gamma}\mathbf{\beta}$ and $\mathbf{X}$ for this scenario.
-
-For block diagonal covariance scenario, we used Gaussian $\mathbf{X}$
-where $E(X_{im}) = 0$ and $Var(X_{im}) = 2$ for all $m$ with a block
-diagonal covariance matrix. The $\mathbf{X}_m$’s were split into $G$
-groups where for $m \neq k$ $Cov(\mathbf{X}_m,\mathbf{X}_k)=1$ if
-predictor $m$ and $k$ were in the same group, otherwise
-$Cov(\mathbf{X}_m,\mathbf{X}_k)=0$. Predictors with $\gamma_m=1$ were
-randomly chosen from $G_1$ of the $G$ groups.
+grouped block diagonal covariance structures (discussed below).
 
 The methods use are:
 
@@ -81,6 +59,20 @@ the console.
 
 ## Squared Exponential Results
 
+For the squared exponential covariance, each $\mathbf{X_m}$ has a two
+dimensional coordinate
+$\mathbf{d_m} = (d_{1m},d_{2m}) \in (1,\ldots,\sqrt{M})^2$; continuous
+and binary $\mathbf{X}$ were considered. For continuous $\mathbf{X}$, we
+used $\mathbf{X_i} \sim^{iid} MVN(0,\Sigma_{s})$ where
+$\Sigma_{s}(\mathbf{d_m},\mathbf{d_k}) = \exp\{-\lVert (\mathbf{d_m} - \mathbf{d_k})/s \rVert_2^2\}$
+and $s=10$. The binary setting used
+$\mathbf{X^b_{i}} = I( \mathbf{X_i}< 0)$ where $I(\cdot)$ denotes the
+indicator function. For $\mathbf{\gamma}$, we set
+$\gamma_m = I\{A_m<Q_{\pi}\}$ where
+$(A_1,\ldots,A_M) \sim MVN(0,\Sigma_{20})$ and $Q_{\pi}$ was such that
+$M_1/M=\pi$. Section C of the Supplementary Materials presents examples
+of $\mathbf{\gamma}\mathbf{\beta}$ and $\mathbf{X}$ for this scenario.
+
 The simulations were ran for all 54 combinations of parameters given in
 the arg_list.csv file for binary and continuous $X$. See the function
 “simulation_func” in the “Sim_funcs.R” file for the code that runs the
@@ -115,6 +107,14 @@ be ran with the same parameters, however, it is **much** slower. For
 when either `RandomFields` or `geoR` are available.
 
 ## Block Diagonal Results
+
+For block diagonal covariance scenario, we used Gaussian $\mathbf{X}$
+where $E(X_{im}) = 0$ and $Var(X_{im}) = 2$ for all $m$ with a block
+diagonal covariance matrix. The $\mathbf{X}_m$’s were split into $G$
+groups where for $m \neq k$ $Cov(\mathbf{X}_m,\mathbf{X}_k)=1$ if
+predictor $m$ and $k$ were in the same group, otherwise
+$Cov(\mathbf{X}_m,\mathbf{X}_k)=0$. Predictors with $\gamma_m=1$ were
+randomly chosen from $G_1$ of the $G$ groups.
 
 The simulations were ran for all 30 combinations of parameters given in
 the arg_list_block.csv. These simulations were ran for all penalization
