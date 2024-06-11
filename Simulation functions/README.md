@@ -84,7 +84,7 @@ methods were ran for 1000 iterations except `ebreg`, which was ran for
 frequently returning an error in those settings.
 
 Note: the simulations in the paper used the RandomFields (version
-3.3.14) and RandomFieldsUtils (1.2.5) togenerate the MVN data with
+3.3.14) and RandomFieldsUtils (1.2.5) to generate the MVN data with
 squared exponential covariance structure. These packages have since been
 removed from CRAN. For Windows machines, the corresponding versions of
 RandomFields and RandomFieldsUtils can be installed from source files
