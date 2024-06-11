@@ -68,7 +68,7 @@ $\Sigma_{s}(\mathbf{d_m},\mathbf{d_k}) = \exp\{-\lVert (\mathbf{d_m} - \mathbf{d
 and $s=10$. The binary setting used
 $\mathbf{X^b_{i}} = I( \mathbf{X_i}< 0)$ where $I(\cdot)$ denotes the
 indicator function. For $\mathbf{\gamma}$, we set
-$\gamma_m = I\{A_m<Q_{\pi}\}$ where
+$\gamma_m = I(A_m < Q_\pi)$ where
 $(A_1,\ldots,A_M) \sim MVN(0,\Sigma_{20})$ and $Q_{\pi}$ was such that
 $M_1/M=\pi$. Section C of the Supplementary Materials presents examples
 of $\mathbf{\gamma}\mathbf{\beta}$ and $\mathbf{X}$ for this scenario.
