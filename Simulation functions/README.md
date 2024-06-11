@@ -57,7 +57,7 @@ file with the full results. Additionally, the function will summarized
 results by iteration (if `verbose=TRUE`, the default) and print them in
 the console.
 
-# Squared Exponential Results
+## Squared Exponential Results
 
 For the squared exponential covariance, each $\mathbf{X}_m$ has a two
 dimensional coordinate
@@ -106,7 +106,7 @@ be ran with the same parameters, however, it is **much** slower. For
 `RandomFields` it takes around a minute). The simulation code will run
 when either `RandomFields` or `geoR` are available.
 
-# Block Diagonal Results
+## Block Diagonal Results
 
 For block diagonal covariance scenario, we used Gaussian $\mathbf{X}$
 where $E(X_{im}) = 0$ and $Var(X_{im}) = 2$ for all $m$ with a block
