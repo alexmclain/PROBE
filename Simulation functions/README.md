@@ -9,7 +9,7 @@ $\epsilon_i \sim N(0,\sigma^2)$. To generate $\mathbf{X}$ and
 $\mathbf{\gamma}$, we considered (i) squared exponential and (ii)
 grouped block diagonal covariance structures.
 
-For the squared exponential covariance, each $\mathbf{X}_m$ has a two
+For the squared exponential covariance, each $\mathbf{X_m}$ has a two
 dimensional coordinate
 $\mathbf{d}_m = (d_{1m},d_{2m}) \in (1,\ldots,\sqrt{M})^2$; continuous
 and binary $\mathbf{X}$ were considered. For continuous $\mathbf{X}$, we
