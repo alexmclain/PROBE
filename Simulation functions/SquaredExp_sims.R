@@ -26,9 +26,10 @@
 ### Note: the simulations in the paper used the the RandomFields package to 
 ### generate the MVN data with squared exponential covariance structure. 
 ### RandomFields has since been removed from CRAN. For Windows machines, 
-### RandomFields and RandomFieldsUtils can be installed from:
+### RandomFields and RandomFieldsUtils the source packages are available from:
 ###   - https://cran.r-project.org/web/packages/RandomFields/index.html
 ###   - https://cran.r-project.org/web/packages/RandomFieldsUtils/index.html
+### However, these can be difficult to install.
 ### For macOS, RandomFields (and all dependencies) can be installed via macport:
 ###   - https://ports.macports.org/port/R-RandomFields/
 ### geoR is an alternative package that has the same capabilities and can be 
