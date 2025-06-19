@@ -1,16 +1,18 @@
-#' @title Fitting PaRtitiOned empirical Bayes Ecm (PROBE) algorithm to sparse high-dimensional linear models.
-#' @description A wrapper function for the all-at-once variant of the PROBE algorithm.
-#' @usage probe(Y, X, Z = NULL, ep = 0.1, maxit = 10000, Y_test = NULL, X_test = NULL, 
-#' Z_test = NULL, verbose = FALSE, signal = NULL, eta_i = NULL, alpha = 0.05, 
+#' @title Fitting PaRtitiOned empirical Bayes Ecm (PROBE) algorithm to sparse high-dimensional linear models with heterogeneous variance.
+#' @description A wrapper function for the H-PROBE algorithm.
+#' @usage hprobe(Y, X, V, Z = NULL, ep = 0.1, maxit = 10000, Y_test = NULL, X_test = NULL, 
+#' Z_test = NULL, V_test = NULL, verbose = FALSE, signal = NULL, eta_i = NULL, alpha = 0.05, 
 #' plot_ind = FALSE, adj = 5)
 #' @param Y The outcome variable.
 #' @param X An \code{n x M} matrix of sparse predictors variables. 
+#' @param V A design matrix of predictors for the variance model (including an intercept).
 #' @param Z (optional) An \code{n x p} matrix or dataframe of other predictors not subjected to the sparsity assumption.
 #' @param ep Value against which to compare convergence criterion (default = 0.1).
 #' @param maxit Maximum number of iterations the algorithm will run for (default = 10000).
 #' @param Y_test (optional) Test Y data used plotting purposes only (doesn't impact results).
 #' @param X_test (optional) Test X data used plotting purposes only (doesn't impact results).
 #' @param Z_test (optional) Test Z data used plotting purposes only (doesn't impact results).
+#' @param V_test (optional) Test V data used plotting purposes only (doesn't impact results).
 #' @param verbose A logical (true/false) value whether to print algorithm iteration progress and summary quantities (default = FALSE).
 #' @param signal (optional) A vector of indicies of the true non-null coefficients. This is used to calculate the true and false discovery rates by iteration for simulated data. Used plotting purposes only (doesn't impact results).
 #' @param eta_i (optional) A vector of the true signal. This is used to calculate the MSE by iteration for simulated data. Used plotting purposes only (doesn't impact results).
@@ -36,58 +38,46 @@
 #' @seealso predict_probe_func to obtain predictions, credible intervals and prediction intervals from PROBE.
 #' @references 
 #' McLain, AC, A Zgodic, H Bondell (2025). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. **Computational Statistics and Data Analysis** 207, 108146.
+#' Zgodic, A., Bai, R., Zhang, J., Wang, Y., Rorden, C., & McLain, A. (2023). Quantifying predictive uncertainty of aphasia severity in stroke patients with sparse heteroscedastic Bayesian high-dimensional regression. arXiv preprint arXiv:2309.08783.
 #' @examples
 #' ### Example
-#' data(Sim_data)
-#' data(Sim_data_test)
-#' attach(Sim_data)
-#' attach(Sim_data_test)
-#' alpha <- 0.05
-#' plot_ind <- TRUE
-#' adj <- 10
+#' data(h_Sim_data)
+#' attach(h_sim_data)
 #' 
-#' # Run the analysis. Y_test and X_test are included for plotting purposes only
-#' full_res <- probe( Y = Y, X = X, Y_test = Y_test, 
-#' X_test = X_test, alpha = alpha, plot_ind = plot_ind, adj = adj)
-#' 
+#' # Run Analysis
+#' res <- hprobe(Y = Y, X = X, V = V)
+#'  
 #' # Predicting for test data
-#' pred_res <- predict_probe_func(full_res, X = X_test)
+#' pred_res <- predict_hprobe_func(res, X_test, V = V_test)
 #' sqrt(mean((Y_test - pred_res$Pred)^2))
+#' head(cbind(Y_test, pred_res))
 #' 
-#' # Estimate of the residual variance and true value
-#' full_res$sigma2_est
-#' sigma2_tr
+#' plot(Y_test, pred_res$Pred, ylab = "Prediction", xlab = "Test Outcome")
+#' abline(coef = c(0,1))
 #' 
-#' # RMSE of estimated beta coefficients
-#' beta_ast_est <- full_res$beta_ast_hat
-#' sqrt(mean((beta_ast_est - beta_tr)^2))
+#' # Proportion of explained variance
+#' 1 - var(Y_test - pred_res$Pred)/var(Y_test)
 #' 
-#' # Posterior expectation of gamma by true
-#' gamma_est <- full_res$E_step$gamma
-#' sum(gamma_est)
-#' sum(gamma_est[beta_tr>0])
+#' ## Omega coefficients (versus true values)
+#' cbind(omega_tr, res$omega)
 #' 
-#' ### Example with additional covariate data Z (not subjected to the sparsity assumption)
-#' data(Sim_data_cov)
+#' ## True versus estimated beta coeffiecients
+#' plot(beta_tr, 
+#'      res$beta_ast_hat, 
+#'      xlab = "True Beta", 
+#'      ylab = "Estimated Beta")
+#' abline(coef = c(0,1))
 #' 
-#' # Calculating the true signal (the impact of X only)
-#' eta_i <- apply(t(Sim_data_cov$X)*Sim_data_cov$beta_tr,2,sum) 
-#  # Run the analysis. eta_i (true signal) and signal are included for plotting purposes only.
-#' full_res <- probe( Y = Sim_data_cov$Y, X = Sim_data_cov$X, Z = Sim_data_cov$Z, 
-#'                   alpha = alpha, plot_ind = plot_ind, signal = signal, eta_i  = eta_i)
-#'                    
-#' # Final estimates of the impact of X versus the true values:
-#' data.frame(true_values = Sim_data_cov$beta_Z_tr, full_res$Calb_mod$res_data[-2,])
-#' 
-#' # Compare to a standard linear model of X on Y:
-#' summary(lm(Y~Sim_data_cov$Z$Cont_cov + Sim_data_cov$Z$Binary_cov))$coefficients
+#' ## Confusion matrix of true versus estimated signals using 0.5 cutoff.
+#' table(beta_tr==0, res$gamma_hat<0.5)
 #' 
 #' 
 #' @export
-probe <- function(Y, X, Z = NULL, ep = 0.1, maxit = 10000, 
-                  Y_test = NULL, X_test = NULL, Z_test = NULL,
-                  verbose = FALSE, signal = NULL, eta_i = NULL, 
-                  alpha = 0.05, plot_ind = FALSE, adj = 5) {
+hprobe <- function(Y, X, V, Z = NULL, ep = 0.1, maxit = 10000, 
+                   Y_test = NULL, X_test = NULL, Z_test = NULL,
+                   V_test = NULL, #new
+                   verbose = FALSE, signal = NULL, eta_i = NULL, 
+                   alpha = 0.05, plot_ind = FALSE, adj = 5) {
   
   if(!is.null(Z)){
     if (!is.matrix(Z)) {
@@ -95,16 +85,24 @@ probe <- function(Y, X, Z = NULL, ep = 0.1, maxit = 10000,
     }
   }
   
-  probe_func(Y = Y, X = X, Z = Z, alpha = alpha, verbose = verbose, 
-             signal = signal, maxit = maxit, eta_i = eta_i,
-             ep = ep, plot_ind = plot_ind, Y_test = Y_test, 
-             X_test = X_test, Z_test = Z_test, adj = adj)
+  hprobe_func(Y = Y, X = X, Z = Z, 
+              V = V, #new
+              alpha = alpha, verbose = verbose, 
+              signal = signal, maxit = maxit, eta_i = eta_i,
+              ep = ep, plot_ind = plot_ind, Y_test = Y_test, 
+              X_test = X_test, Z_test = Z_test, 
+              V_test = V_test, #new
+              adj = adj)
 }
 
 
-probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 1000, 
-                       eta_i = NULL, ep = 0.1, plot_ind = FALSE, 
-                       Y_test = NULL, X_test = NULL, Z_test = NULL, adj = 5){
+hprobe_func <- function(Y, X, Z = NULL, 
+                        V, #new
+                        alpha, verbose = TRUE, signal, maxit = 1000,
+                        eta_i = NULL, ep = 0.1, plot_ind = FALSE, 
+                        Y_test = NULL, X_test = NULL, Z_test = NULL, 
+                        V_test = NULL, #new
+                        adj = 5){
   
   ##### Setting initial values and initializing outputs ####
   M <- dim(X)[2]
@@ -118,7 +116,11 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
   gamma <- beta_t + 1
   W_ast <- rep(0, N)
   W_ast_var <- W_ast + 1
-  sigma2 <- var(Y)
+  
+  # remove: sigma2 <- var(Y)
+  sigma2 <- sigma2_O <- var(Y) #new
+  Sigma_y_inv <- solve(diag(1, N)) #new
+  
   count <- rcy_ct <- conv_check <- try2 <- 0
   plot_dat <- NULL
   X_2 <- X * X
@@ -137,15 +139,21 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
     
     # Performing the M-step.
     if (count == 1 & try2 == 0) {
-      LR_update <- lr_cpp_func(Y, X, Z, sigma2)
+      
+      # remove: LR_update <- lr_cpp_func(Y, X, Z, sigma2)
+      LR_update <- lr_cpp_func.h(Y, X, Z, sigma2, Sigma_y_inv) #new 
+      
       beta_t_new <- c(LR_update$coef[,2])
       # Performing the damping step
       beta_t   <- beta_t*(1-fact) + beta_t_new*fact
       beta_var <- beta_var_old*(1-fact) + (LR_update$obs_SE[,2])^2*fact
     }else {
-      LR_update <- m_step_cpp_func(Y, X, Z, W_ast, 
-                                   W_ast_var, gamma, 
-                                   beta_t, X_2, sigma2) 
+      # remove: LR_update <- m_step_cpp_func(Y, X, Z, W_ast, 
+      #                              W_ast_var, gamma, 
+      #                              beta_t, X_2, sigma2) 
+      
+      LR_update <- m_step_cpp_func.h(Y, X, Z, W_ast, W_ast_var, gamma,
+                                     beta_t, X_2, sigma2, Sigma_y_inv) #new
       
       beta_t_new <- c(LR_update$coef[,2])
       # Performing the damping step
@@ -182,9 +190,22 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
     W_ast_var <- W_W2_update$W_ast_var
     if (var(W_ast) > 0) {
       # Run calibration model
-      mod <- m_step_regression(Y, W_ast, W_ast_var + W_ast^2, Z, a = -3/2, Int = TRUE) 
+      mod <- m_step_regression.h(Y, W_ast, W_ast_var + W_ast^2, Z, a = -3/2,
+                                 Int = TRUE, V = V,
+                                 Sigma_y_inv = Sigma_y_inv,
+                                 c_param = 1000, sigma2_omega = Inf) #new
+      
       Y_pred <- mod$Y_pred
-      sigma2 <- mod$sigma2_est 
+      
+      # remove: sigma2 <- mod$sigma2_est 
+      omega <- mod$omega #new
+      sigma2 <- min(c(mod$sigma2_est,sigma2_O)) #new
+      
+      Sigma_y <- diag(exp(-1*as.numeric(V%*%omega))) #new
+      Sigma_y_inv <- inv_cpp(Sigma_y)$inverse #new
+      t1 <- try(tmp <- solve(Sigma_y), silent = TRUE) #new
+      if(unique(class(t1) %in% "try-error")){ print("Sigma_y_inv did not work") } #new #not necessary, was a check for me in simuls
+      
       if (count > 1) {
         # Check Convergence
         if(length(c(W_ast_old[W_ast2_old>0],W_ast[W_ast2_old>0]))>0){
@@ -309,7 +330,8 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
   full_res <- list(beta_ast_hat = beta_ast_hat, beta_hat = beta_hat, beta_hat_var = beta_hat_var, 
                    gamma_hat = gamma, E_step = E_step, Calb_mod = mod, count = count, plot_dat = plot_dat, 
                    Seq_test = Seq_test, M_step = M_step, sigma2_est = mod$sigma2_est, conv = conv, 
-                   W_ast = W_ast, W_ast_var = W_ast_var, Y = Y, X = X, Z = Z)
+                   W_ast = W_ast, W_ast_var = W_ast_var, Y = Y, X = X, Z = Z, omega = omega, Sigma_y = Sigma_y)
+  #new: in these outputs, I added "omega". "sigma2_est" can stay as is, but it will look different between H-PROBE and PROBE, as expected
   
   # Plotting iteration results if plot_ind=TRUE and either eta_i or test
   # data is given
@@ -325,6 +347,164 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
   return(full_res)
 }
 
+m_step_regression.h <- function(Y, W, W2, V, Sigma_y_inv, 
+                                sigma2_omega = Inf, Z = NULL, 
+                                a = -3/2, Int = TRUE, 
+                                c_param = 1000) {
+  
+  N <- length(Y)
+  if(!is.null(W)){
+    if(Int){ Wmat <- cbind(1, W, Z) }
+    if(!Int & !is.null(Z) ){ Wmat <- cbind(W, Z) }
+    if(!Int & is.null(Z) ){ Wmat <- matrix(W) }
+    W_col <- c(1 + 1*I(Int))
+    
+    # remove: WWpr  <- t(Wmat) %*% Wmat
+    # remove WWpr[W_col, W_col] <- sum(W2)
+    
+    WWpr  <- t(Wmat) %*% Sigma_y_inv %*% Wmat #new
+    WWpr[W_col, W_col] <- sum(W2 %*% Sigma_y_inv) #new
+    
+    df <- N - ncol(Wmat) + 2*a - 3
+    
+    if (det(WWpr) != 0) {
+      WWpr_inv <- solve(WWpr)
+      # remove: beta_w <- WWpr_inv %*% t(Wmat) %*% Y
+      beta_w <- WWpr_inv %*% t(Wmat) %*% Sigma_y_inv %*% Y #new
+      
+      Y_pred <- Wmat %*% beta_w
+      hat <- diag(Wmat %*% WWpr_inv %*% t(Wmat))
+      resid <- (Y - Y_pred)
+      RSS <- sum(resid^2) + beta_w[W_col]^2*(sum(W2) - sum(W^2))
+      
+      # remove: VCV <- RSS/(df) * t(WWpr_inv) %*% (t(Wmat) %*% Wmat) %*% WWpr_inv
+      VCV <- t(WWpr_inv) %*% (t(Wmat) %*% Sigma_y_inv %*% Wmat) %*% WWpr_inv #new
+    }
+    if (det(WWpr) == 0) {
+      final_mod <- lm(Y ~ 0 + Wmat)
+      beta_w <- as.numeric(final_mod$coefficients)
+      beta_w[is.na(beta_w)] <- 0
+      Y_pred <- as.numeric(final_mod$fitted.values)
+      hat <- as.numeric(influence(final_mod)$hat)
+      resid <- as.numeric(final_mod$residuals)
+      RSS <- sum(resid^2)
+      VCV <- vcov(final_mod)
+    }
+    
+    Std_Err  <- sqrt(diag(VCV))
+    T_vals   <- beta_w/Std_Err
+  }
+  if(is.null(W)){
+    if(is.null(Z)){
+      fail_lm <- lm(Y~1)
+      coef_fail <- summary(fail_lm)$coefficients
+      Y_pred <- as.numeric(fail_lm$fitted.values)
+      hat <- as.numeric(influence(fail_lm)$hat)
+      resid <- as.numeric(fail_lm$residuals)
+      RSS <- sum(resid^2)
+      df <- N- 1 - + 2*a - 3
+      beta_w <- c(coef_fail[1], 0)
+      VCV <- matrix(0,2,2)
+      VCV[1,1] <- vcov(fail_lm)
+      Std_Err  <- c(sqrt(vcov(fail_lm)), 0)
+      T_vals   <- c(beta_w[1]/Std_Err[1], 0)
+    }else{
+      Wmat <- cbind(1, Z)
+      fail_lm <- lm(Y~Wmat)
+      coef_fail <- summary(fail_lm)$coefficients
+      Y_pred <- as.numeric(fail_lm$fitted.values)
+      hat <- as.numeric(influence(fail_lm)$hat)
+      resid <- as.numeric(fail_lm$residuals)
+      RSS <- sum(resid^2)
+      p <- dim(Wmat)
+      df <- N - p + 2*a - 3
+      beta_w <- c(coef_fail[1], 0, coef_fail[-1])
+      VCV <- matrix(0,2+p,2+p)
+      VCV[-2,-2] <- vcov(fail_lm)
+      Std_Err  <- sqrt(diag(VCV))
+      Std_Err  <- c(Std_Err[1],0,Std_Err[-1])
+      T_vals   <- c(beta_w[1]/Std_Err[1], 0, beta_w[-1]/Std_Err[-1])
+    }
+  }
+  
+  p_val    <- pt(abs(T_vals), df = df, lower.tail = FALSE) * 2
+  res_data <- data.frame(Estimate = beta_w, Std_Err = Std_Err, T_val = T_vals, df = df, p_val = p_val)
+  if(Int){row.names(res_data) <- c("Intercept", "W", colnames(Z))}
+  if(!Int){row.names(res_data) <- c("W", colnames(Z))}
+  
+  # new: this big chunk of comment
+  # optimization for the posterior of omega
+  log.lklh.MLG <- function(par, V, Y, alphaW, Wmat, c_param, sigma2_omega){
+    (-1) * ( sum( 0.5*V%*%par - 0.5*((Y-Wmat%*%alphaW)^2)*exp(V%*%par) ) + ( (c_param*rep(1, ncol(V))*(c_param^(-0.5))*(1/sigma2_omega)) %*% (diag(ncol(V))%*%par) ) -
+               ( c_param*rep(1, ncol(V)) %*% exp((c_param^(-0.5))*(1/sigma2_omega)*diag(ncol(V))%*%par) ) )
+  }
+  
+  optim_results <- optim(par = rep(0,ncol(V)) , fn = log.lklh.MLG,
+                         V = V, Y = Y, alphaW = beta_w,
+                         Wmat = Wmat, c_param = c_param,
+                         sigma2_omega = sigma2_omega, method = "BFGS")
+  
+  omega <- optim_results$par
+  
+  # new: added 'omega = omega' to this list of outputs
+  list(coef = beta_w, sigma2_est = RSS/df, RSS = RSS, 
+       Y_pred = Y_pred, hat = hat, resid = resid, 
+       VCV = VCV, res_data = res_data, omega = omega)
+  
+}
+
+# new: added a new argument for this function 'Sigma_y_inv' 
+m_step_cpp_func.h <- function(Y, X, Z = NULL, W_ast, W_ast_var, gamma, 
+                              beta_vec, X_2, sigma2, Sigma_y_inv) {
+  
+  N <- length(Y)
+  if (!is.null(Z)) {
+    # remove: LRcpp <- PROBE_cpp0_5_6_covs(Y, X, W_ast, W_ast_var, gamma, 
+    #                              beta_vec, X_2, sigma2, as.matrix(Z))
+    LRcpp <- PROBE_cpp0_5_6_covs_h(Y, X, W_ast, W_ast_var, gamma,
+                                   beta_vec, X_2, sigma2, as.matrix(Z), Sigma_y_inv) #new
+  } else {
+    # remove: LRcpp <- PROBE_cpp0_5_6(Y, X, W_ast, W_ast_var, gamma, 
+    #                         beta_vec, X_2, sigma2)
+    LRcpp <- PROBE_cpp0_5_6_h(Y, X, W_ast, W_ast_var, gamma,
+                              beta_vec, X_2, sigma2, Sigma_y_inv) #new
+  }
+  
+  ret <- list(coef = LRcpp$Coefficients, obs_SE = LRcpp$StdErr)
+  
+  return(ret)
+}
+
+# new: a new argument 'Sigma_y_inv' was added to this function
+lr_cpp_func.h <- function(Y, X, Z = NULL, sigma2, Sigma_y_inv) {
+  
+  N <- length(Y)
+  if (!is.null(Z)) {
+    # remove: LRcpp <- LM_w_COVS_by_col(Y, X, as.matrix(Z), sigma2)
+    LRcpp <- LM_w_COVS_by_col_h(Y, X, as.matrix(Z), sigma2, Sigma_y_inv) #new
+  } else {
+    # remove: LRcpp <- LM_by_col(Y, X, sigma2)
+    LRcpp <- LM_by_col_h(Y, X, sigma2, Sigma_y_inv) #new
+  }
+  t_val <- LRcpp$Coefficients[, 2]/LRcpp$StdErr[, 2]
+  
+  ret <- list(coef = LRcpp$Coefficients, obs_SE = LRcpp$StdErr, T_val = t_val)
+  return(ret)
+}
+
+
+m_update_func <- function(X,X_2,beta_tilde, gamma, beta_tilde_var=0){
+  X_gamma <- MVM(X,gamma*beta_tilde)$Res 
+  W_ast<- c(Row_sum(as.matrix(X_gamma))$Rowsum)
+  W_ast[is.nan(W_ast) | is.na(W_ast)] <- 0
+  W_ast_var <- NULL
+  if(!is.null(X_2)){
+    X_gamma2 <- MVM(X_2,beta_tilde^2*gamma*(1-gamma) + gamma*beta_tilde_var)$Res 
+    W_ast_var <- c(Row_sum(as.matrix(X_gamma2))$Rowsum)
+    W_ast_var[is.nan(W_ast_var) | is.na(W_ast_var)] <- 0
+  }
+  return(list(W_ast=W_ast,W_ast_var=W_ast_var))
+}
 
 
 mtr_func <- function(E_step, alpha, signal = NULL) {

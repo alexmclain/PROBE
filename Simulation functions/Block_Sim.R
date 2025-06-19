@@ -36,23 +36,55 @@ library(R.utils)
 library(ncvreg)
 library(dplyr)
 
+## File path to output simulation results
+output <- NULL
+
 parlist <- data.frame(read.csv("arg_list_block.csv",header = TRUE, fileEncoding="UTF-8-BOM"))
 
 
 par_num <- 1
 parlist[par_num,]
 args_list <- parlist[par_num,]
-sim1 <- block_simulation(args_list, B = 3, ebreg_I = FALSE, verbose = TRUE)
+sim1 <- block_simulation(args_list, B = 3, ebreg_I = FALSE, verbose = TRUE, output = output)
 
 
 par_num <- 15 
 parlist[par_num,]
 args_list <- parlist[par_num,]
-sim1 <- block_simulation(args_list, B = 3, ebreg_I = FALSE, verbose = TRUE)
+sim1 <- block_simulation(args_list, B = 3, ebreg_I = FALSE, verbose = TRUE, output = output)
 
 
 par_num <- 30 
 parlist[par_num,]
 args_list <- parlist[par_num,]
-sim1 <- block_simulation(args_list, B = 3, ebreg_I = FALSE, verbose = TRUE)
+sim1 <- block_simulation(args_list, B = 3, ebreg_I = FALSE, verbose = TRUE, output = output)
+
+
+
+### Robust Simulations
+
+
+par_num <- 1
+parlist[par_num,]
+## Add degrees of freedom for the t-distribution
+args_list <- c(parlist[par_num,],10) 
+sim1 <- block_simulation_robust(args_list, B = 3, ebreg_I = FALSE, verbose = TRUE, output = output)
+
+
+par_num <- 15 
+parlist[par_num,]
+args_list <- parlist[par_num,]
+## Add degrees of freedom for the t-distribution
+args_list <- c(parlist[par_num,],10) 
+sim1 <- block_simulation_robust(args_list, B = 3, ebreg_I = FALSE, verbose = TRUE, output = output)
+
+
+par_num <- 30 
+parlist[par_num,]
+args_list <- parlist[par_num,]
+## Add degrees of freedom for the t-distribution
+args_list <- c(parlist[par_num,],10) 
+sim1 <- block_simulation_robust(args_list, B = 3, ebreg_I = FALSE, verbose = TRUE, output = output)
+
+
 

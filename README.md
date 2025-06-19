@@ -2,9 +2,12 @@
 # Introduction
 
 This repository contains the R software tools to run the PaRtitiOned
-empirical Bayes Ecm (PROBE) algorithm. We give a brief explanation of
-the method below. For more details see McLain, Zgodic, and Bondell
-(2022).
+empirical Bayes Ecm (PROBE) and Heteroscedastic PROBE (H-PROBE)
+algorithms. We give a brief explanation of the PROBE algorithm below.
+For more details see McLain, Zgodic, and Bondell (2025) and Zgodic et
+al. (2023). The folders `Drug Response Example` and
+`Simulation functions` contain reproducible examples for the PROBE
+algorithm only. Similar folders for H-PROBE are under development.
 
 Minimal prior assumptions on the parameters are used through the use of
 plug-in empirical Bayes estimates of hyperparameters. Efficient maximum
@@ -17,11 +20,10 @@ two-groups approach to multiple testing. The PROBE algorithm is applied
 to sparse high-dimensional linear regression, which can be completed
 using one-at-a-time or all-at-once type optimization. PROBE is a novel
 alternative to Markov chain Monte Carlo (Liang et al. 2008; Bondell and
-Reich 2012 ; Chae, Lin, and Dunson 2019), empirical Bayes (George and
+Reich 2012; Chae, Lin, and Dunson 2019), empirical Bayes (George and
 Foster 2000; Martin, Mess, and Walker 2017; Martin and Tang 2020), and
 Variational Bayes (Carbonetto and Stephens 2012; Blei, Kucukelbir, and
-McAuliffe 2017; Ray and Szabó 2021) approaches to fitting sparse linear
-models.
+McAuliffe 2017) approaches to fitting sparse linear models.
 
 Our proposed method performs Bayesian variable selection with an
 uninformative spike-and-slab prior on the regression parameters, which
@@ -80,7 +82,9 @@ Here, **Sim_data** contains the following elements:
 - **beta_tr**: true value of beta coefficients, and
 - **signal**: indicies of the $M_1$ non-null predictors
 
-where $n=400$, $M=10000$ and $M_1=100$.
+where $n=400$, $M=10000$ and $M_1=100$ if the data on GitHub are used.
+The data that come with the CRAN version of the package have $M=400$ and
+$M_1=40$.
 
 In this first run of the analysis we include the true signal
 ($\eta_i= X_i \beta$) and indices of the non-null beta coefficients
@@ -231,9 +235,86 @@ Compare to a standard linear model of $Z$ on $Y$:
 summary(lm(Y~Z$Cont_cov + Z$Binary_cov))$coefficients
 ```
 
+# Example of H-PROBE
+
+The following is demonstration of how to implement H-PROBE with
+simulated data.
+
+Install the package.
+
+``` r
+library(devtools)
+install_github(repo="alexmclain/PROBE", subdir="probe")
+```
+
+Load the package and the data.
+
+``` r
+library(probe)
+data(h_Sim_data)
+attach(h_sim_data) 
+```
+
+Here, **h_sim_data** contains the following elements:
+
+- **Y**: vector of outcome variables for the training set,
+- **X**: $n \times M$ covariate matrix for modeling the mean of the
+  training set,
+- **V**: $n \times 7$ design matrix for modeling the variance of the
+  training set,
+- **beta_tr**: true value of $\beta$ coefficients,
+- **omega_tr**: true value of $\omega$ coefficients, and
+- **signal**: indicies of the $M_1$ non-null predictors
+
+where $n=200$, $M=400$ and $M_1=20$ if the data on GitHub are used.
+
+Running the Analysis
+
+``` r
+res <- hprobe(Y = Y, X = X, V = V)
+```
+
+An example of estimating predicted values and prediction intervals for
+the test data.
+
+``` r
+pred_res <- predict_hprobe_func(res, X_test, V = V_test)
+sqrt(mean((Y_test - pred_res$Pred)^2))
+plot(Y_test, pred_res$Pred, ylab = "Prediction", xlab = "Test Outcome")
+abline(coef = c(0,1))
+# Proportion of explained variance
+1 - var(Y_test - pred_res$Pred)/var(Y_test)
+
+# Predicted values and prediction intervals for the first 5 subjects (with the true outcome)
+head(cbind(Y_test, pred_res))
+```
+
+True and estimated values of the $\omega$ coefficients.
+
+``` r
+cbind(true_omega, res$omega)
+```
+
+True versus estimated $\beta$ coeffiecients.
+
+``` r
+plot(true_beta_signals, 
+     res$beta_ast_hat, 
+     xlab = "True Beta", 
+     ylab = "Estimated Beta")
+abline(coef = c(0,1))
+```
+
+Confusion matrix of true versus estimated signals using 0.5 cutoff.
+
+``` r
+table(true_beta_signals==0, res$gamma_hat<0.5)
+```
+
 # References
 
-<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="refs" class="references csl-bib-body hanging-indent"
+entry-spacing="0">
 
 <div id="ref-Bleetal17" class="csl-entry">
 
@@ -325,11 +406,12 @@ Sparse High-Dimensional Linear Regression.” *J. Mach. Learn. Res.* 21:
 
 </div>
 
-<div id="ref-McLetal22" class="csl-entry">
+<div id="ref-mclain2025efficient" class="csl-entry">
 
-McLain, Alexander C., Anja Zgodic, and Howard Bondell. 2022. “Sparse
-High-Dimensional Linear Regression with a Partitioned Empirical Bayes
-ECM Algorithm.” <https://arxiv.org/abs/2209.08139>.
+McLain, Alexander C, Anja Zgodic, and Howard Bondell. 2025. “Efficient
+Sparse High-Dimensional Linear Regression with a Partitioned Empirical
+Bayes ECM Algorithm.” *Computational Statistics & Data Analysis* 207:
+108146.
 
 </div>
 
@@ -347,15 +429,6 @@ Oxford University Press.
 ———. 1993. “<span class="nocase">Maximum likelihood estimation via the
 ECM algorithm: A general framework</span>.” *Biometrika* 80 (2): 267–78.
 <https://doi.org/10.1093/biomet/80.2.267>.
-
-</div>
-
-<div id="ref-KolBot21" class="csl-entry">
-
-Ray, Kolyan, and Botond Szabó. 2021. “Variational Bayes for
-High-Dimensional Linear Regression with Sparse Priors.” *Journal of the
-American Statistical Association* 0 (0): 1–12.
-<https://doi.org/10.1080/01621459.2020.1847121>.
 
 </div>
 

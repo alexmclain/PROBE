@@ -48,6 +48,45 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// PROBE_cpp0_5_6_covs_h
+List PROBE_cpp0_5_6_covs_h(const arma::vec y, const arma::mat Z, const arma::colvec Wt, const arma::colvec W_var, const arma::colvec delta, const arma::colvec beta_vec, const arma::mat Z2, double sigma2, const arma::mat X, const arma::mat Sigma_y_inv);
+RcppExport SEXP _probe_PROBE_cpp0_5_6_covs_h(SEXP ySEXP, SEXP ZSEXP, SEXP WtSEXP, SEXP W_varSEXP, SEXP deltaSEXP, SEXP beta_vecSEXP, SEXP Z2SEXP, SEXP sigma2SEXP, SEXP XSEXP, SEXP Sigma_y_invSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type Wt(WtSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type W_var(W_varSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type delta(deltaSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type beta_vec(beta_vecSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Z2(Z2SEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Sigma_y_inv(Sigma_y_invSEXP);
+    rcpp_result_gen = Rcpp::wrap(PROBE_cpp0_5_6_covs_h(y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, X, Sigma_y_inv));
+    return rcpp_result_gen;
+END_RCPP
+}
+// PROBE_cpp0_5_6_h
+List PROBE_cpp0_5_6_h(const arma::vec y, const arma::mat Z, const arma::colvec Wt, const arma::colvec W_var, const arma::colvec delta, const arma::colvec beta_vec, const arma::mat Z2, double sigma2, const arma::mat Sigma_y_inv);
+RcppExport SEXP _probe_PROBE_cpp0_5_6_h(SEXP ySEXP, SEXP ZSEXP, SEXP WtSEXP, SEXP W_varSEXP, SEXP deltaSEXP, SEXP beta_vecSEXP, SEXP Z2SEXP, SEXP sigma2SEXP, SEXP Sigma_y_invSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type Wt(WtSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type W_var(W_varSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type delta(deltaSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec >::type beta_vec(beta_vecSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Z2(Z2SEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Sigma_y_inv(Sigma_y_invSEXP);
+    rcpp_result_gen = Rcpp::wrap(PROBE_cpp0_5_6_h(y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, Sigma_y_inv));
+    return rcpp_result_gen;
+END_RCPP
+}
 // PROBE_one_cpp
 List PROBE_one_cpp(const arma::vec y, const arma::mat Z, const arma::colvec Wt, const arma::colvec W_var, const arma::colvec delta, const arma::colvec beta_vec, const arma::mat Z2, double sigma2, const arma::colvec update_order);
 RcppExport SEXP _probe_PROBE_one_cpp(SEXP ySEXP, SEXP ZSEXP, SEXP WtSEXP, SEXP W_varSEXP, SEXP deltaSEXP, SEXP beta_vecSEXP, SEXP Z2SEXP, SEXP sigma2SEXP, SEXP update_orderSEXP) {
@@ -67,6 +106,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// inv_cpp
+List inv_cpp(const arma::mat Sigma_y);
+RcppExport SEXP _probe_inv_cpp(SEXP Sigma_ySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat >::type Sigma_y(Sigma_ySEXP);
+    rcpp_result_gen = Rcpp::wrap(inv_cpp(Sigma_y));
+    return rcpp_result_gen;
+END_RCPP
+}
 // LM_by_col
 List LM_by_col(const arma::vec y, const arma::mat X, double sigma2);
 RcppExport SEXP _probe_LM_by_col(SEXP ySEXP, SEXP XSEXP, SEXP sigma2SEXP) {
@@ -77,6 +127,20 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat >::type X(XSEXP);
     Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
     rcpp_result_gen = Rcpp::wrap(LM_by_col(y, X, sigma2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// LM_by_col_h
+List LM_by_col_h(const arma::vec y, const arma::mat X, double sigma2, const arma::mat Sigma_y_inv);
+RcppExport SEXP _probe_LM_by_col_h(SEXP ySEXP, SEXP XSEXP, SEXP sigma2SEXP, SEXP Sigma_y_invSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Sigma_y_inv(Sigma_y_invSEXP);
+    rcpp_result_gen = Rcpp::wrap(LM_by_col_h(y, X, sigma2, Sigma_y_inv));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -91,6 +155,21 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat >::type COVS(COVSSEXP);
     Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
     rcpp_result_gen = Rcpp::wrap(LM_w_COVS_by_col(y, X, COVS, sigma2));
+    return rcpp_result_gen;
+END_RCPP
+}
+// LM_w_COVS_by_col_h
+List LM_w_COVS_by_col_h(const arma::vec y, const arma::mat X, const arma::mat COVS, double sigma2, const arma::mat Sigma_y_inv);
+RcppExport SEXP _probe_LM_w_COVS_by_col_h(SEXP ySEXP, SEXP XSEXP, SEXP COVSSEXP, SEXP sigma2SEXP, SEXP Sigma_y_invSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type COVS(COVSSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type Sigma_y_inv(Sigma_y_invSEXP);
+    rcpp_result_gen = Rcpp::wrap(LM_w_COVS_by_col_h(y, X, COVS, sigma2, Sigma_y_inv));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -121,9 +200,14 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_probe_PROBE_cpp0_5_6", (DL_FUNC) &_probe_PROBE_cpp0_5_6, 8},
     {"_probe_PROBE_cpp0_5_6_covs", (DL_FUNC) &_probe_PROBE_cpp0_5_6_covs, 9},
+    {"_probe_PROBE_cpp0_5_6_covs_h", (DL_FUNC) &_probe_PROBE_cpp0_5_6_covs_h, 10},
+    {"_probe_PROBE_cpp0_5_6_h", (DL_FUNC) &_probe_PROBE_cpp0_5_6_h, 9},
     {"_probe_PROBE_one_cpp", (DL_FUNC) &_probe_PROBE_one_cpp, 9},
+    {"_probe_inv_cpp", (DL_FUNC) &_probe_inv_cpp, 1},
     {"_probe_LM_by_col", (DL_FUNC) &_probe_LM_by_col, 3},
+    {"_probe_LM_by_col_h", (DL_FUNC) &_probe_LM_by_col_h, 4},
     {"_probe_LM_w_COVS_by_col", (DL_FUNC) &_probe_LM_w_COVS_by_col, 4},
+    {"_probe_LM_w_COVS_by_col_h", (DL_FUNC) &_probe_LM_w_COVS_by_col_h, 5},
     {"_probe_MVM", (DL_FUNC) &_probe_MVM, 2},
     {"_probe_Row_sum", (DL_FUNC) &_probe_Row_sum, 1},
     {NULL, NULL, 0}

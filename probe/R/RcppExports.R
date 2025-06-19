@@ -9,16 +9,36 @@ PROBE_cpp0_5_6_covs <- function(y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, X)
     .Call(`_probe_PROBE_cpp0_5_6_covs`, y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, X)
 }
 
+PROBE_cpp0_5_6_covs_h <- function(y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, X, Sigma_y_inv) {
+    .Call(`_probe_PROBE_cpp0_5_6_covs_h`, y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, X, Sigma_y_inv)
+}
+
+PROBE_cpp0_5_6_h <- function(y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, Sigma_y_inv) {
+    .Call(`_probe_PROBE_cpp0_5_6_h`, y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, Sigma_y_inv)
+}
+
 PROBE_one_cpp <- function(y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, update_order) {
     .Call(`_probe_PROBE_one_cpp`, y, Z, Wt, W_var, delta, beta_vec, Z2, sigma2, update_order)
+}
+
+inv_cpp <- function(Sigma_y) {
+    .Call(`_probe_inv_cpp`, Sigma_y)
 }
 
 LM_by_col <- function(y, X, sigma2) {
     .Call(`_probe_LM_by_col`, y, X, sigma2)
 }
 
+LM_by_col_h <- function(y, X, sigma2, Sigma_y_inv) {
+    .Call(`_probe_LM_by_col_h`, y, X, sigma2, Sigma_y_inv)
+}
+
 LM_w_COVS_by_col <- function(y, X, COVS, sigma2) {
     .Call(`_probe_LM_w_COVS_by_col`, y, X, COVS, sigma2)
+}
+
+LM_w_COVS_by_col_h <- function(y, X, COVS, sigma2, Sigma_y_inv) {
+    .Call(`_probe_LM_w_COVS_by_col_h`, y, X, COVS, sigma2, Sigma_y_inv)
 }
 
 MVM <- function(X, v) {

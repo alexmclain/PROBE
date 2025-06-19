@@ -1,14 +1,14 @@
 Package: probe
 Type: Package
 Title: Sparse High-Dimensional Linear Regression with a PaRtitiOned Empirical Bayes Ecm (PROBE) Algorithm
-Version: 1.1
+Version: 1.2
 Date: 2023-10-01
 Authors@R: c(person("Alexander", "McLain", email = "mclaina@mailbox.sc.edu", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-5475-0670")), person("Anja", "Zgodic", role = c("aut", "ctb")))
 Description: Implements an efficient and powerful Bayesian approach for sparse high-dimensional linear regression. It uses minimal prior assumptions on the parameters through plug-in empirical Bayes estimates of hyperparameters. An efficient Parameter-Expanded Expectation-Conditional-Maximization (PX-ECM) algorithm estimates maximum a posteriori (MAP) values of regression parameters and variable selection probabilities. The PX-ECM results in a robust computationally efficient coordinate-wise optimization, which adjusts for the impact of other predictor variables. The E-step is motivated by the popular two-group approach to multiple testing. The result is a PaRtitiOned empirical Bayes Ecm (PROBE) algorithm applied to sparse high-dimensional linear regression, implemented using one-at-a-time or all-at-once type optimization. Simulation studies found the all-at-once variant to be superior.  
 BugReports: https://github.com/alexmclain/PROBE/issues
 License: GPL (>= 2)
 Encoding: UTF-8
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 Imports: Rcpp, glmnet, RcppArmadillo
 LinkingTo: Rcpp, RcppArmadillo
 NeedsCompilation: yes

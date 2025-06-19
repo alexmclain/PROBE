@@ -3,7 +3,6 @@
 \docType{package}
 \name{probe-package}
 \alias{probe-package}
-\alias{_PACKAGE}
 \title{probe: Sparse High-Dimensional Linear Regression with a PaRtitiOned Empirical Bayes Ecm (PROBE) Algorithm}
 \description{
 Implements an efficient and powerful Bayesian approach for sparse high-dimensional linear regression. It uses minimal prior assumptions on the parameters through plug-in empirical Bayes estimates of hyperparameters. An efficient Parameter-Expanded Expectation-Conditional-Maximization (PX-ECM) algorithm estimates maximum a posteriori (MAP) values of regression parameters and variable selection probabilities. The PX-ECM results in a robust computationally efficient coordinate-wise optimization, which adjusts for the impact of other predictor variables. The E-step is motivated by the popular two-group approach to multiple testing. The result is a PaRtitiOned empirical Bayes Ecm (PROBE) algorithm applied to sparse high-dimensional linear regression, implemented using one-at-a-time or all-at-once type optimization. Simulation studies found the all-at-once variant to be superior.
@@ -13,7 +12,8 @@ Examples for applying PROBE to sparse high-dimensional linear regression are giv
 for one-at-a-time \code{\link{probe_one}} or all-at-once \code{\link{probe}} type optimization.
 }
 \references{
-\itemize{ \item McLain, A. C., Zgodic, A., & Bondell, H. (2022). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. arXiv preprint arXiv:2209.08139.}
+\itemize{ \item McLain, AC, A Zgodic, H Bondell (2025). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. **Computational Statistics and Data Analysis** 207, 108146.
+\item Zgodic, A., Bai, R., Zhang, J., Wang, Y., Rorden, C., & McLain, A. (2023). Quantifying predictive uncertainty of aphasia severity in stroke patients with sparse heteroscedastic Bayesian high-dimensional regression. arXiv preprint arXiv:2309.08783.}
 }
 \seealso{
 Useful links:
@@ -27,7 +27,7 @@ Useful links:
 
 Authors:
 \itemize{
-  \item Anja Zodiac [contributor]
+  \item Anja Zgodic [contributor]
 }
 
 }

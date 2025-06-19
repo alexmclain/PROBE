@@ -1,7 +1,224 @@
 
 
+block_simulation_psl <- function(parlist, B, verbose = FALSE, seed = 1641, output){
+  
+  
+  K <- B
+  ## Initializing data outputs
+  PROBE_res <- matrix(0,K,18)
+  colnames(PROBE_res) <- c("M","p","eta","sig_nois","G","G1", 
+                           "MSE", "MAD", "ECP_PI", "ECP_CI", 
+                           "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", "Beta_mse", 
+                           "Conv", "time", "alpha")
+  
+  sparsevb_res <- matrix(-999,K,8)
+  
+  colnames(sparsevb_res) <- c("sparsevb_Signals", "sparsevb_Corr_Signals", "sparsevb_MSE", 
+                              "sparsevb_MAD", "sparsevb_Test_MSPE", "sparsevb_Test_MSE", 
+                              "sparsevb_Beta_mse", "sparsevb_time")
+  
+  LASSO_res <- matrix(-999,K,8)
+  
+  colnames(LASSO_res) <- c("lasso_Sum_delta","lasso_Sum_delta_sig", 
+                           "lasso_MSE", "lasso_MAD", 
+                           "lasso_Obs_test_MSPE", "lasso_test_MSE", "lasso_Beta_mse", "lasso_time")
+  
+  
+  
+  sigma_vec <- NULL
+  ## Set convergence criteria
+  maxit <- 300
+  ep <- 0.1
+  ep_one <- 0.01
+  alpha <- 0.05
+  
+  filname <- paste0("Probe_lasso_Sparsevb.csv")
+  print(filname)
+  
+  N <- 400
+  alpha <- 0.05
+  adj <- 10
+  
+  
+  for(k in 1:K){
+    
+    # Generate X and Signal Data
+    
+    par_num <- k %% 30
+    if(par_num == 0){par_num <- 30}
+    parlist[par_num,]
+    args_list <- parlist[par_num,]
+    
+    cat(unlist(args_list), "\nGenerating data for iteration",k,"\n")
+    
+    
+    M <- as.numeric(args_list[1])
+    M1 <- as.integer(M*as.numeric(args_list[2]))
+    p <- 1-as.numeric(args_list[2])
+    eta <-   as.numeric(args_list[3]) #Eta value
+    sig_nois <- as.numeric(args_list[4])
+    G <- as.numeric(args_list[5])
+    G1 <- as.numeric(args_list[6])
+    sd_random_intercept <- 1
+    
+    data <- block.data.gen2(
+      seed + k,
+      N,
+      M,
+      1-p,
+      G,
+      G1,
+      sd_random_intercept,
+      eta*2,
+      sig_nois, # signal-to-noise ratio
+      N
+    )
+    
+    Y <- data$Y
+    X <- data$X
+    eta_i <- c(X %*% data$beta)
+    Y_test <- data$Y_test
+    X_test <- data$X_test
+    eta_test <- c(X_test %*% data$beta)
+    signal = data$s_j
+    eta_vec <- data$beta
+    sig_ind <- 1*I(eta_vec != 0)
+    sd_noise <- data$sd_noise
+    
+    cat("Fitting model for iteration",k,"\n")
+    #### all-at-once probe
+    test3 <- system.time(mod.out <- probe(Y = Y, 
+                                          X = X, 
+                                          adj = adj, 
+                                          maxit = maxit, 
+                                          ep = ep))
+    
+    alpha_est <- mod.out$Calb_mod$coef[2]
+    gamma_est <- mod.out$E_step$gamma
+    beta_est <- mod.out$beta_hat
+    beta_ast_est <- mod.out$beta_ast_hat
+    sigma2_est_new <- mod.out$Calb_mod$sigma2_est
+    Y_pred <- mod.out$Calb_mod$Y_pred
+    
+    MT_res <- MTR(mod.out$E_step,alpha,signal)
+    
+    #Prediction for test data
+    pred_res_test <- predict_probe_func(mod.out, X_test, Z = NULL, alpha = alpha)
+    # Proportion of test PIs that contain the test observation
+    ECP_PI <- mean(1*I(Y_test>pred_res_test$PI_L & Y_test<pred_res_test$PI_U))
+    # Proportion of test CIs that contain the test true signal
+    ECP_CI <- mean(1*I(eta_test>pred_res_test$CI_L & eta_test<pred_res_test$CI_U))
+    
+    PROBE_res[k,] <- c(unlist(args_list), 
+                       mean((Y_pred-eta_i)^2)/(sd_noise^2), 
+                       median(abs(eta_test - pred_res_test$Pred)), ECP_PI, ECP_CI,   
+                       mod.out$count, sigma2_est_new, mean((Y_test - pred_res_test$Pred)^2), 
+                       mean((eta_test - pred_res_test$Pred)^2)/(sd_noise^2), 
+                       mean((eta_vec - beta_ast_est)^2),
+                       mod.out$conv, test3[3], alpha_est)
+    
+    #### LASSO
+    test3 <- system.time(cv.out <- lasso(Y,X))
+    
+    lasso_coefs <- coef(cv.out,s="lambda.min")[-1]
+    s_hat       <- length(which(coef(cv.out, s = "lambda.1se")[-1] != 0))
+    lasso_pred  <- predict(cv.out,newx = X,s="lambda.min")
+    lasso_mse <- mean((lasso_pred - eta_i)^2)/(sd_noise^2)
+    lasso_pred_test<- predict(cv.out,newx = X_test,s="lambda.min")
+    lasso_mad <- median(abs(lasso_pred_test - eta_test))
+    lasso_mspe     <- mean((lasso_pred_test - Y_test)^2)
+    lasso_mse_test <- mean((lasso_pred_test - eta_test)^2)/(sd_noise^2)
+    
+    
+    LASSO_res[k,] <- c(length(lasso_coefs[lasso_coefs!=0]),
+                       length(lasso_coefs[lasso_coefs!=0 & sig_ind==1]), 
+                       lasso_mse, lasso_mad , lasso_mspe, lasso_mse_test, 
+                       mean((lasso_coefs - eta_vec)^2), test3[3])
+    
+    
+    
+    test3 <- system.time(t1 <- try(test <- sparsevb::svb.fit(X=X, Y=Y, 
+                                                             family = "linear", 
+                                                             slab = "laplace",
+                                                             intercept = TRUE,
+    ), silent = TRUE))
+    
+    if(is.null(attr(t1,"class"))){
+      sparsevb_coefs <- test$mu * test$gamma #approximate posterior mean
+      sparsevb_pred  <- X%*%c(sparsevb_coefs) + test$intercept
+      sparsevb_mse <- mean((sparsevb_pred - eta_i)^2)/(sd_noise^2)
+      sparsevb_pred_test<- X_test%*%c(sparsevb_coefs) + test$intercept
+      sparsevb_mspe     <- mean((sparsevb_pred_test - Y_test)^2)
+      sparsevb_mse_test <- mean((sparsevb_pred_test - eta_test)^2)/(sd_noise^2)
+      sparsevb_mad      <- median(abs(sparsevb_pred_test - eta_test))
+      
+      E_step <- list(lfdr = test$gamma, p_vals = test$gamma, p_hat = 1)
+      svb_MTR <- MTR(E_step, alpha, signal)
+      
+      sparsevb_res[k,] <- c(svb_MTR$BH_sum$LFDR_sum[-3], 
+                            sparsevb_mse, sparsevb_mad , sparsevb_mspe, sparsevb_mse_test, 
+                            mean((sparsevb_coefs - eta_vec)^2), test3[3])
+      
+    }
+    
+    k_res <- data.frame(rbind(round(PROBE_res[k,-c(1:6,9:12,16)],3),
+                              round(c(LASSO_res[k,-c(1:2)],0),3),
+                              round(c(sparsevb_res[k,-c(1:2)],0),3)))
+    rownames(k_res) <- c("PROBE","LASSO",  "SPARSEVB")
+    
+    
+    cat("Iteration",k,"finished.\n")
+    
+    if(verbose){
+      print(k_res)
+    }
+    sigma_vec <- c(sigma_vec,sd_noise)
+  }
+  
+  full_res <-   cbind(PROBE_res,LASSO_res, sparsevb_res)
+  
+  write.csv(full_res, 
+            paste0(output,filname)
+  )
+  
+  
+  MSE_comb <- full_res[,grepl('MSE', colnames(full_res))]
+  MSPE_comb <- full_res[,grepl('MSPE', colnames(full_res))]
+  MAD_comb <- full_res[,grepl('MAD', colnames(full_res))]
+  beta_comb <- full_res[,grepl('Beta', colnames(full_res))]
+  ECP_res <- full_res[,grepl('ECP', colnames(full_res))]
+  time_res <- full_res[,grepl('time', colnames(full_res))]
+  cat("\n Summarizing some results:\n")
+  
+  avg_mse <- apply(MSE_comb,2,mean) ## 
+  avg_mspe <- apply(MSPE_comb,2,mean) ## 
+  med_mad <- apply(MAD_comb,2,median) ### 
+  avg_time <- apply(time_res,2,mean) ### 
+  avg_b_err <- apply(beta_comb,2,mean) 
+  avg_sig_probe <- mean(full_res[,grepl('Sigma2_est', colnames(full_res))])
+  mse_mat <- matrix(avg_mse,nrow = length(avg_mse)/2, ncol = 2, byrow = TRUE)
+  colnames(mse_mat) <- c("Train_MSE", "Test_MSE")
+  rownames(mse_mat) <- c("PROBE","LASSO", "SPARSEVB")
+  
+  sig_dig <- ceiling(c(-log10(min(mse_mat)), -log10(min(avg_mspe)), -log(min(med_mad)), 
+                       -log10(min(avg_b_err)), -log10(min(avg_time)) ))+1
+  sig_dig[1:2] <- sig_dig[1:2] +1
+  sig_dig[sig_dig<1] <- 1
+  pred_mat <- data.frame( round(mse_mat, sig_dig[1]), Test_MSPE = round(avg_mspe, sig_dig[2]), 
+                          MAD = round(med_mad, sig_dig[3]), Beta_MSE = round(avg_b_err, sig_dig[4]), 
+                          Avg_time = round(avg_time, sig_dig[5]))
+  
+  cat("\n PROBE average estimated sigma2:",round(avg_sig_probe,2),"\n")
+  print(pred_mat)
+  
+  #cat("\n Average empirical coverage probabilities of 95% CI's and PI's:\n")
+  #print(apply(ECP_res,2,mean)) ### 
+  
+  full_res
+}
 
-block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641){
+
+block_simulation_VB <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641, output = NULL){
   
   K <- B
   N <- 400
@@ -18,9 +235,10 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
   
   
   ## Initializing data outputs
-  PROBE_res <- matrix(0,K,13)
-  colnames(PROBE_res) <- c("Sum_delta", "Sum_delta_sig", "MSE", "MAD", "ECP_PI", 
-                           "ECP_CI", "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", "Beta_mse", 
+  PROBE_res <- matrix(0,K,15)
+  colnames(PROBE_res) <- c("Signals_BH", "Corr_Signals_BH", "Signals_LFDR", "Corr_Signals_LFDR", 
+                           "MSE", "MAD", "ECP_PI", "ECP_CI", 
+                           "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", "Beta_mse", 
                            "Conv", "time")
   
   SSLASSO_res <- sparsevb_res <- sparsevb_c_res <- matrix(-999,K,8)
@@ -31,10 +249,6 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
   colnames(sparsevb_res) <- c("sparsevb_Signals", "sparsevb_Corr_Signals", "sparsevb_MSE", 
                               "sparsevb_MAD", "sparsevb_Test_MSPE", "sparsevb_Test_MSE", 
                               "sparsevb_Beta_mse", "sparsevb_time")
-  
-  colnames(sparsevb_c_res) <- c("sparsevb_c_Signals", "sparsevb_c_Corr_Signals", "sparsevb_c_MSE", 
-                                "sparsevb_c_MAD", "sparsevb_c_Test_MSPE", "sparsevb_c_Test_MSE", 
-                                "sparsevb_c_Beta_mse", "sparsevb_c_time")
   
   colnames(SSLASSO_res) <- c("SSLASSO_Signals", "SSLASSO_Corr_Signals", "SSLASSO_MSE", "SSLASSO_MAD", 
                              "SSLASSO_Test_MSPE", "SSLASSO_Test_MSE", "SSLASSO_Beta_mse", 
@@ -65,6 +279,150 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
   maxit <- 300
   ep <- 0.1
   ep_one <- 0.01
+  alpha <- 0.05
+  if(M > 5000){ep_one <- 0.1}
+  
+  filname <- paste0("VB_sim_robust eta ",eta," M ",M," SNR ", 
+                    sig_nois," M1 ",M1," G ",G," G1 ",G1," seed ",seed,".csv")
+  print(filname)
+  
+  for(k in 1:K){
+    
+    # Generate X and Signal Data
+    
+    cat("Generating data for iteration",k,"\n")
+    
+    data <- block.data.gen.robust(
+      seed + k,
+      N,
+      M,
+      1-p,
+      G,
+      G1,
+      sd_random_intercept,
+      eta*2,
+      sig_nois, # signal-to-noise ratio
+      N,
+      df = 10
+    )
+    
+    Y <- data$Y
+    X <- data$X
+    eta_i <- c(X %*% data$beta)
+    Y_test <- data$Y_test
+    X_test <- data$X_test
+    eta_test <- c(X_test %*% data$beta)
+    signal = data$s_j
+    eta_vec <- data$beta
+    sig_ind <- 1*I(eta_vec != 0)
+    sd_noise <- data$sd_noise
+    
+    cat("Fitting model for iteration",k,"\n")
+    
+    
+    test3 <- system.time(t1 <- try(test <- sparsevb::svb.fit(X=X, Y=Y, 
+                                                             family = "linear", 
+                                                             slab = "laplace",
+                                                             intercept = TRUE,
+    ), silent = TRUE))
+    
+    if(is.null(attr(t1,"class"))){
+      sparsevb_coefs <- test$mu * test$gamma #approximate posterior mean
+      sparsevb_pred  <- X%*%c(sparsevb_coefs) + test$intercept
+      sparsevb_mse <- mean((sparsevb_pred - eta_i)^2)
+      sparsevb_pred_test<- X_test%*%c(sparsevb_coefs) + test$intercept
+      sparsevb_mspe     <- mean((sparsevb_pred_test - Y_test)^2)
+      sparsevb_mse_test <- mean((sparsevb_pred_test - eta_test)^2)
+      sparsevb_mad      <- median(abs(sparsevb_pred_test - eta_test))
+      
+      E_step <- list(lfdr = 1-test$gamma, p_vals = test$gamma, p_hat = 1)
+      svb_MTR <- MTR(E_step, alpha, signal)
+      
+      sparsevb_res[k,] <- c(svb_MTR$BH_sum$LFDR_sum[-3], 
+                            sparsevb_mse, sparsevb_mad , sparsevb_mspe, sparsevb_mse_test, 
+                            mean((sparsevb_coefs - eta_vec)^2), test3[3])
+      
+    }
+    
+    
+    cat(sparsevb_res[k,],"Iteration",k,"finished.\n")
+    
+  }
+  
+  full_res <-   cbind(sparsevb_res, M, M1, eta, sigma_vec, sig_nois)
+  
+  write.csv(full_res, 
+            paste0(output,filname)
+  )
+  
+  
+  full_res
+}
+
+
+
+block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641, output = NULL){
+  
+  K <- B
+  N <- 400
+  M <- as.numeric(args_list[1])
+  M1 <- as.integer(M*as.numeric(args_list[2]))
+  p <- 1-as.numeric(args_list[2])
+  alpha <- 0.05
+  eta <-   as.numeric(args_list[3]) #Eta value
+  sig_nois <- as.numeric(args_list[4])
+  G <- as.numeric(args_list[5])
+  G1 <- as.numeric(args_list[6])
+  sd_random_intercept <- 1
+  adj <- 10
+  
+  
+  ## Initializing data outputs
+  PROBE_res <- matrix(0,K,15)
+  colnames(PROBE_res) <- c("Signals_BH", "Corr_Signals_BH", "Signals_LFDR", "Corr_Signals_LFDR", 
+                           "MSE", "MAD", "ECP_PI", "ECP_CI", 
+                           "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", "Beta_mse", 
+                           "Conv", "time")
+  
+  SSLASSO_res <- sparsevb_res <- sparsevb_c_res <- matrix(-999,K,8)
+  LASSO_res <- adap_LASSO_res <- SCAD_res <- MCP_res <- matrix(-999,K,8)
+  ebreg_res <- matrix(-999,K,9)
+  
+  
+  colnames(sparsevb_res) <- c("sparsevb_Signals", "sparsevb_Corr_Signals", "sparsevb_MSE", 
+                              "sparsevb_MAD", "sparsevb_Test_MSPE", "sparsevb_Test_MSE", 
+                              "sparsevb_Beta_mse", "sparsevb_time")
+  
+  colnames(SSLASSO_res) <- c("SSLASSO_Signals", "SSLASSO_Corr_Signals", "SSLASSO_MSE", "SSLASSO_MAD", 
+                             "SSLASSO_Test_MSPE", "SSLASSO_Test_MSE", "SSLASSO_Beta_mse", 
+                             "SSLASSO_time")
+  
+  colnames(ebreg_res) <- c("ebreg_Signals", "ebreg_Corr_Signals", "ebreg_res_MSE", "ebreg_MAD", 
+                           "ebreg_Test_MSPE", "ebreg_Test_MSE", "ebreg_Beta_mse", "ebreg_ECP_PI",
+                           "ebreg_time")
+  
+  colnames(LASSO_res) <- c("lasso_Sum_delta","lasso_Sum_delta_sig", 
+                           "lasso_MSE", "lasso_MAD", 
+                           "lasso_Obs_test_MSPE", "lasso_test_MSE", "lasso_Beta_mse", "lasso_time")
+  
+  colnames(adap_LASSO_res) <- c("adap_lasso_Sum_delta","adap_lasso_Sum_delta_sig", 
+                                "adap_lasso_MSE", "adap_lasso_MAD", 
+                                "adap_lasso_Obs_test_MSPE", "adap_lasso_test_MSE", 
+                                "adap_lasso_Beta_mse", "adap_lasso_time")
+  
+  colnames(SCAD_res) <- c("SCAD_Sum_delta","SCAD_Sum_delta_sig", 
+                          "SCAD_MSE", "SCAD_MAD", 
+                          "SCAD_Obs_test_MSPE", "SCAD_test_MSE", "SCAD_Beta_mse", "SCAD_time")
+  colnames(MCP_res) <- c("MCP_Sum_delta","MCP_Sum_delta_sig", 
+                         "MCP_MSE", "MCP_MAD", 
+                         "MCP_Obs_test_MSPE", "MCP_test_MSE", "MCP_Beta_mse", "MCP_time")
+  sigma_vec <- NULL
+  if(!ebreg_I){ebreg_res <- NULL}
+  ## Set convergence criteria
+  maxit <- 300
+  ep <- 0.1
+  ep_one <- 0.01
+  alpha <- 0.05
   if(M > 5000){ep_one <- 0.1}
   
   filname <- paste0("All_sim_ eta ",eta," M ",M," SNR ", 
@@ -114,6 +472,8 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
     sigma2_est_new <- mod.out$Calb_mod$sigma2_est
     Y_pred <- mod.out$Calb_mod$Y_pred
     
+    MT_res <- MTR(mod.out$E_step,alpha,signal)
+    
     #Prediction for test data
     pred_res_test <- predict_probe_func(mod.out, X_test, Z = NULL, alpha = alpha)
     # Proportion of test PIs that contain the test observation
@@ -121,10 +481,10 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
     # Proportion of test CIs that contain the test true signal
     ECP_CI <- mean(1*I(eta_test>pred_res_test$CI_L & eta_test<pred_res_test$CI_U))
     
-    PROBE_res[k,] <- c(sum(gamma_est),
-                       sum(gamma_est[signal]), 
+    PROBE_res[k,] <- c(MT_res$BH_sum$BH_sum[-3],
+                       MT_res$BH_sum$LFDR_sum[-3], 
                        mean((Y_pred-eta_i)^2), 
-                       median(abs(Y_pred - eta_i)), ECP_PI, ECP_CI,   
+                       median(abs(eta_test - pred_res_test$Pred)), ECP_PI, ECP_CI,   
                        mod.out$count, sigma2_est_new, mean((Y_test - pred_res_test$Pred)^2), 
                        mean((eta_test - pred_res_test$Pred)^2), 
                        mean((eta_vec - beta_ast_est)^2),
@@ -147,8 +507,8 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
                        length(lasso_coefs[lasso_coefs!=0 & sig_ind==1]), 
                        lasso_mse, lasso_mad , lasso_mspe, lasso_mse_test, 
                        mean((lasso_coefs - eta_vec)^2), test3[3])
-
-
+    
+    
     
     #### ADAPTIVE LASSO
     test3 <- system.time(t1 <- try(cv.out <- adap_lasso(Y,X), silent = TRUE))
@@ -160,8 +520,8 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
       lasso_coefs <- coef(cv.out,s="lambda.min")[-1]
       lasso_pred  <- predict(cv.out,newx = X,s="lambda.min")
       lasso_mse <- mean((lasso_pred - eta_i)^2)
-      lasso_mad <- median(abs(lasso_pred - eta_i))
       lasso_pred_test<- predict(cv.out,newx = X_test,s="lambda.min")
+      lasso_mad      <- median(abs(lasso_pred_test - eta_test))
       lasso_mspe     <- mean((lasso_pred_test - Y_test)^2)
       lasso_mse_test <- mean((lasso_pred_test - eta_test)^2)
       
@@ -178,8 +538,8 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
       scad_coefs <- cv.out2$fit$beta[,cv.out2$min][-1]
       ash_scad <- predict(cv.out2,matrix(as.numeric(X),N,M),which = cv.out2$min)
       scad_mse <- mean((ash_scad - eta_i)^2)
-      scad_mad <- median(abs(ash_scad - eta_i))
       ash_scad_test <- predict(cv.out2,matrix(as.numeric(X_test),N,M),which = cv.out2$min)
+      scad_mad      <- median(abs(ash_scad_test - eta_test))
       scad_mspe     <- mean((ash_scad_test - Y_test)^2)
       scad_mse_test <- mean((ash_scad_test - eta_test)^2)
       
@@ -217,14 +577,14 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
       SSLASSO_coefs <- mod.out$beta[,L]
       SSLASSO_pred  <- X%*%c(SSLASSO_coefs) + mod.out$intercept[L]
       SSLASSO_mse <- mean((SSLASSO_pred - eta_i)^2)
-      SSLASSO_mad <- median(abs(SSLASSO_pred - eta_i))
       SSLASSO_pred_test<- X_test%*%c(SSLASSO_coefs) + mod.out$intercept[L]
       SSLASSO_mspe     <- mean((SSLASSO_pred_test - Y_test)^2)
       SSLASSO_mse_test <- mean((SSLASSO_pred_test - eta_test)^2)
+      SSLASSO_mad      <- median(abs(SSLASSO_pred_test - eta_test))
       
       
       SSLASSO_res[k,] <- c(length(mod.out$model),
-                           length(mod.out$model %in% signal), 
+                           sum(mod.out$model %in% signal), 
                            SSLASSO_mse, SSLASSO_mad , SSLASSO_mspe, SSLASSO_mse_test, 
                            mean((SSLASSO_coefs - eta_vec)^2), test3[3])
     }
@@ -232,7 +592,7 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
     
     #empirical Bayes method
     if(ebreg_I){
-
+      
       
       n <- length(Y)
       log.f <- function(x) log(1/n) + log(x <= n) #log prior of the model size
@@ -254,11 +614,11 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
         ebreg_pred  <- yhat_ebreg[1:400]
         
         ebreg_mse <- mean((ebreg_pred - eta_i)^2)
-        ebreg_mad <- median(abs(ebreg_pred - eta_i))
         
-        ebreg_pred_test  <- yhat_ebreg[401:800]
+        ebreg_pred_test<- yhat_ebreg[401:800]
         ebreg_mspe     <- mean((ebreg_pred_test - Y_test)^2 )
         ebreg_mse_test <- mean((ebreg_pred_test - eta_test)^2)
+        ebreg_mad      <- median(abs(ebreg_pred_test - eta_test))
         
         ebreg_res[k,] <- c(sum(ebreg_pip),
                            sum(ebreg_pip*sig_ind), 
@@ -268,76 +628,55 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
     }
     
     
-    test3 <- system.time(t1 <- try(test <- svb.fit(X=X, Y=Y, 
-                                                   family = "linear", 
-                                                   slab = "laplace"
-                                                   ), silent = TRUE))
+    test3 <- system.time(t1 <- try(test <- sparsevb::svb.fit(X=X, Y=Y, 
+                                                             family = "linear", 
+                                                             slab = "laplace",
+                                                             intercept = TRUE,
+    ), silent = TRUE))
     
     if(is.null(attr(t1,"class"))){
       sparsevb_coefs <- test$mu * test$gamma #approximate posterior mean
       sparsevb_pred  <- X%*%c(sparsevb_coefs) + test$intercept
       sparsevb_mse <- mean((sparsevb_pred - eta_i)^2)
-      sparsevb_mad <- median(abs(sparsevb_pred - eta_i))
       sparsevb_pred_test<- X_test%*%c(sparsevb_coefs) + test$intercept
       sparsevb_mspe     <- mean((sparsevb_pred_test - Y_test)^2)
       sparsevb_mse_test <- mean((sparsevb_pred_test - eta_test)^2)
+      sparsevb_mad      <- median(abs(sparsevb_pred_test - eta_test))
       
+      E_step <- list(lfdr = test$gamma, p_vals = test$gamma, p_hat = 1)
+      svb_MTR <- MTR(E_step, alpha, signal)
       
-      sparsevb_res[k,] <- c(sum(test$gamma ),
-                            sum(test$gamma*sig_ind), 
+      sparsevb_res[k,] <- c(svb_MTR$BH_sum$LFDR_sum[-3], 
                             sparsevb_mse, sparsevb_mad , sparsevb_mspe, sparsevb_mse_test, 
                             mean((sparsevb_coefs - eta_vec)^2), test3[3])
       
-      sparsevb_c_res[k,] <- sparsevb_res[k,]
-      
-      if(max(sparsevb_coefs)>0){
-        sparsevb_pred_cov  <- X%*%c(sparsevb_coefs) + test$intercept
-        sparse_mod <- lm(Y~sparsevb_pred_cov)
-        sparsevb_coefs <- sparsevb_coefs*sparse_mod$coefficients[2] #approximate posterior mean
-        sparsevb_pred <- sparse_mod$fitted.values
-        
-        sparsevb_mse <- mean((sparsevb_pred - eta_i)^2)
-        sparsevb_mad <- median(abs(sparsevb_pred - eta_i))
-        sparsevb_pred_test <- X_test%*%c(sparsevb_coefs) + 
-          sparse_mod$coefficients[2]*test$intercept + 
-          sparse_mod$coefficients[1]
-        sparsevb_mspe     <- mean((sparsevb_pred_test - Y_test)^2)
-        sparsevb_mse_test <- mean((sparsevb_pred_test - eta_test)^2)
-        
-        
-        sparsevb_c_res[k,] <- c(sum(test$gamma ),
-                                sum(test$gamma*sig_ind), 
-                                sparsevb_mse, sparsevb_mad , sparsevb_mspe, sparsevb_mse_test, 
-                                mean((sparsevb_coefs - eta_vec)^2), test3[3])
-      }
     }
     
     
     if(ebreg_I){
-      k_res <- data.frame(rbind(round(PROBE_res[k,-c(5:8,12)],3),round(LASSO_res[k,],3),
+      k_res <- data.frame(rbind(round(PROBE_res[k,-c(1:2,7:10,14)],3),round(LASSO_res[k,],3),
                                 round(adap_LASSO_res[k,],3), round(SCAD_res[k,],3),
                                 round(MCP_res[k,],3), round(SSLASSO_res[k,],3),
                                 round(sparsevb_res[k,],3), round(ebreg_res[k,-8],3)))
-      colnames(k_res)[c(1:2,8)] <- c("Sum_gamma", "Sum_correct_gamma", "Time(sec)")
+      colnames(k_res)[c(1:2,8)] <- c("TotRej", "TrueRej", "Time(sec)")
       rownames(k_res) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
-                           "SPARSEVB","EBREG")}
+                           "SPARSEVB","EBREG")
+    }
     if(!ebreg_I){
-      k_res <- data.frame(rbind(round(PROBE_res[k,-c(5:8,12)],3),round(LASSO_res[k,],3),
-                                round(adap_LASSO_res[k,],3),round(SCAD_res[k,],3),
-                                round(MCP_res[k,],3),round(SSLASSO_res[k,],3),
+      k_res <- data.frame(rbind(round(PROBE_res[k,-c(1:2,7:10,14)],3),round(LASSO_res[k,],3),
+                                round(adap_LASSO_res[k,],3), round(SCAD_res[k,],3),
+                                round(MCP_res[k,],3), round(SSLASSO_res[k,],3),
                                 round(sparsevb_res[k,],3)))
-      colnames(k_res)[c(1:2,8)] <- c("Sum_gamma", "Sum_correct_gamma", "Time(sec)")
+      colnames(k_res)[c(1:2,8)] <- c("TotRej", "TrueRej", "Time(sec)")
       rownames(k_res) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
-                           "SPARSEVB")}
+                           "SPARSEVB")
+    }
     
     cat("Iteration",k,"finished.\n")
     
     if(verbose){
-      sig_data <- matrix(sd_noise^2)
-      colnames(sig_data) <- "true_sigma2"
-      print(round(PROBE_res[k,c(7,8)],3))
       if(ebreg_I){print(round(ebreg_res[k,8],3))}
-      print(k_res[,-c(1:2)])
+      print(k_res)
     }
     sigma_vec <- c(sigma_vec,sd_noise)
   }
@@ -346,7 +685,9 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
                       SCAD_res, MCP_res, SSLASSO_res, sparsevb_res, 
                       ebreg_res, M, M1, eta, sigma_vec, sig_nois)
   
-  write.csv(full_res,filname)
+  write.csv(full_res, 
+            paste0(output,filname)
+  )
   
   
   MSE_comb <- full_res[,grepl('MSE', colnames(full_res))]
@@ -389,6 +730,482 @@ block_simulation <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641
   full_res
 }
 
+
+block_simulation_robust <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641, output = NULL){
+  
+  K <- B
+  N <- 400
+  M <- as.numeric(args_list[1])
+  M1 <- as.integer(M*as.numeric(args_list[2]))
+  p <- 1-as.numeric(args_list[2])
+  alpha <- 0.05
+  eta <-   as.numeric(args_list[3]) #Eta value
+  sig_nois <- as.numeric(args_list[4])
+  G <- as.numeric(args_list[5])
+  G1 <- as.numeric(args_list[6])
+  df <- as.numeric(args_list[7])
+  sd_random_intercept <- 1
+  adj <- 10
+  
+  
+  ## Initializing data outputs
+  PROBE_res <- matrix(0,K,15)
+  colnames(PROBE_res) <- c("Signals_BH", "Corr_Signals_BH", "Signals_LFDR", "Corr_Signals_LFDR", 
+                           "MSE", "MAD", "ECP_PI", "ECP_CI", 
+                           "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", "Beta_mse", 
+                           "Conv", "time")
+  
+  SSLASSO_res <- sparsevb_res <- sparsevb_c_res <- matrix(-999,K,8)
+  LASSO_res <- adap_LASSO_res <- SCAD_res <- MCP_res <- matrix(-999,K,8)
+  ebreg_res <- matrix(-999,K,9)
+  
+  
+  colnames(sparsevb_res) <- c("sparsevb_Signals", "sparsevb_Corr_Signals", "sparsevb_MSE", 
+                              "sparsevb_MAD", "sparsevb_Test_MSPE", "sparsevb_Test_MSE", 
+                              "sparsevb_Beta_mse", "sparsevb_time")
+  
+  colnames(SSLASSO_res) <- c("SSLASSO_Signals", "SSLASSO_Corr_Signals", "SSLASSO_MSE", "SSLASSO_MAD", 
+                             "SSLASSO_Test_MSPE", "SSLASSO_Test_MSE", "SSLASSO_Beta_mse", 
+                             "SSLASSO_time")
+  
+  colnames(ebreg_res) <- c("ebreg_Signals", "ebreg_Corr_Signals", "ebreg_res_MSE", "ebreg_MAD", 
+                           "ebreg_Test_MSPE", "ebreg_Test_MSE", "ebreg_Beta_mse", "ebreg_ECP_PI",
+                           "ebreg_time")
+  
+  colnames(LASSO_res) <- c("lasso_Sum_delta","lasso_Sum_delta_sig", 
+                           "lasso_MSE", "lasso_MAD", 
+                           "lasso_Obs_test_MSPE", "lasso_test_MSE", "lasso_Beta_mse", "lasso_time")
+  
+  colnames(adap_LASSO_res) <- c("adap_lasso_Sum_delta","adap_lasso_Sum_delta_sig", 
+                                "adap_lasso_MSE", "adap_lasso_MAD", 
+                                "adap_lasso_Obs_test_MSPE", "adap_lasso_test_MSE", 
+                                "adap_lasso_Beta_mse", "adap_lasso_time")
+  
+  colnames(SCAD_res) <- c("SCAD_Sum_delta","SCAD_Sum_delta_sig", 
+                          "SCAD_MSE", "SCAD_MAD", 
+                          "SCAD_Obs_test_MSPE", "SCAD_test_MSE", "SCAD_Beta_mse", "SCAD_time")
+  colnames(MCP_res) <- c("MCP_Sum_delta","MCP_Sum_delta_sig", 
+                         "MCP_MSE", "MCP_MAD", 
+                         "MCP_Obs_test_MSPE", "MCP_test_MSE", "MCP_Beta_mse", "MCP_time")
+  sigma_vec <- NULL
+  if(!ebreg_I){ebreg_res <- NULL}
+  ## Set convergence criteria
+  maxit <- 300
+  ep <- 0.1
+  ep_one <- 0.01
+  alpha <- 0.2
+  if(M > 5000){ep_one <- 0.1}
+  
+  filname <- paste0("All_sim_robust eta ",eta," M ",M," SNR ", 
+                    sig_nois," M1 ",M1," G ",G," G1 ",G1," seed ",seed,"_df ",df,".csv")
+  print(filname)
+  
+  # test <- try(read.csv(
+  #   paste0(output,filname)
+  #   ), silent = TRUE
+  #   )
+  # 
+  # if(attr(test,"class") != "data.frame"){
+  # 
+  for(k in 1:K){
+    
+    # Generate X and Signal Data
+    
+    cat("Generating data for iteration",k,"\n")
+    
+    data <- block.data.gen.robust(
+      seed + k,
+      N,
+      M,
+      1-p,
+      G,
+      G1,
+      sd_random_intercept,
+      eta*2,
+      sig_nois, # signal-to-noise ratio
+      N,
+      df
+    )
+    
+    Y <- data$Y
+    X <- data$X
+    eta_i <- c(X %*% data$beta)
+    Y_test <- data$Y_test
+    X_test <- data$X_test
+    eta_test <- c(X_test %*% data$beta)
+    signal = data$s_j
+    eta_vec <- data$beta
+    sig_ind <- 1*I(eta_vec != 0)
+    sd_noise <- data$sd_noise
+    
+    cat("Fitting model for iteration",k,"\n")
+    #### all-at-once probe
+    test3 <- system.time(mod.out <- probe(Y = Y, 
+                                          X = X, 
+                                          adj = adj, 
+                                          maxit = maxit, 
+                                          ep = ep))
+    
+    alpha_est <- mod.out$Calb_mod$coef[2]
+    gamma_est <- mod.out$E_step$gamma
+    beta_est <- mod.out$beta_hat
+    beta_ast_est <- mod.out$beta_ast_hat
+    sigma2_est_new <- mod.out$Calb_mod$sigma2_est
+    Y_pred <- mod.out$Calb_mod$Y_pred
+    pred_res_train <- predict_probe_func(mod.out, X, Z = NULL, alpha = alpha)
+    
+    MT_res <- MTR(mod.out$E_step,alpha,signal)
+    
+    #Prediction for test data
+    pred_res_test <- predict_probe_func(mod.out, X_test, Z = NULL, alpha = alpha)
+    # Proportion of test PIs that contain the test observation
+    ECP_PI <- mean(1*I(Y_test>pred_res_test$PI_L & Y_test<pred_res_test$PI_U))
+    # Proportion of test CIs that contain the test true signal
+    ECP_CI <- mean(1*I(eta_test>pred_res_test$CI_L & eta_test<pred_res_test$CI_U))
+    
+    PROBE_res[k,] <- c(MT_res$BH_sum$BH_sum[-3],
+                       MT_res$BH_sum$LFDR_sum[-3], 
+                       mean((Y_pred-eta_i)^2), 
+                       median(abs(eta_test - pred_res_test$Pred)), ECP_PI, ECP_CI,   
+                       mod.out$count, sigma2_est_new, mean((Y_test - pred_res_test$Pred)^2), 
+                       mean((eta_test - pred_res_test$Pred)^2), 
+                       mean((eta_vec - beta_ast_est)^2),
+                       mod.out$conv, test3[3])
+    
+    #### LASSO
+    test3 <- system.time(cv.out <- lasso(Y,X))
+    
+    lasso_coefs <- coef(cv.out,s="lambda.min")[-1]
+    s_hat       <- length(which(coef(cv.out, s = "lambda.1se")[-1] != 0))
+    lasso_pred  <- predict(cv.out,newx = X,s="lambda.min")
+    lasso_mse <- mean((lasso_pred - eta_i)^2)
+    lasso_pred_test<- predict(cv.out,newx = X_test,s="lambda.min")
+    lasso_mad <- median(abs(lasso_pred_test - eta_test))
+    lasso_mspe     <- mean((lasso_pred_test - Y_test)^2)
+    lasso_mse_test <- mean((lasso_pred_test - eta_test)^2)
+    
+    
+    LASSO_res[k,] <- c(length(lasso_coefs[lasso_coefs!=0]),
+                       length(lasso_coefs[lasso_coefs!=0 & sig_ind==1]), 
+                       lasso_mse, lasso_mad , lasso_mspe, lasso_mse_test, 
+                       mean((lasso_coefs - eta_vec)^2), test3[3])
+    
+    
+    
+    #### ADAPTIVE LASSO
+    test3 <- system.time(t1 <- try(cv.out <- adap_lasso(Y,X), silent = TRUE))
+    
+    ridge_coefs <- NULL
+    if(is.null(attr(t1,"class"))){
+      ridge_coefs <- cv.out$best_ridge_coef
+      cv.out <- cv.out$cv.out
+      lasso_coefs <- coef(cv.out,s="lambda.min")[-1]
+      lasso_pred  <- predict(cv.out,newx = X,s="lambda.min")
+      lasso_mse <- mean((lasso_pred - eta_i)^2)
+      lasso_pred_test<- predict(cv.out,newx = X_test,s="lambda.min")
+      lasso_mad <- median(abs(lasso_pred_test - eta_test))
+      lasso_mspe     <- mean((lasso_pred_test - Y_test)^2)
+      lasso_mse_test <- mean((lasso_pred_test - eta_test)^2)
+      
+      
+      adap_LASSO_res[k,] <- c(length(lasso_coefs[lasso_coefs!=0]),
+                              length(lasso_coefs[lasso_coefs!=0 & sig_ind==1]), 
+                              lasso_mse, lasso_mad , lasso_mspe, lasso_mse_test, 
+                              mean((lasso_coefs - eta_vec)^2), test3[3])
+    }
+    
+    test3 <- system.time(t1 <- try(cv.out2 <- scad_func(Y,X,N,M), silent = TRUE))
+    
+    if(!(attr(t1,"class")=="try-error")){
+      scad_coefs <- cv.out2$fit$beta[,cv.out2$min][-1]
+      ash_scad <- predict(cv.out2,matrix(as.numeric(X),N,M),which = cv.out2$min)
+      scad_mse <- mean((ash_scad - eta_i)^2)
+      ash_scad_test <- predict(cv.out2,matrix(as.numeric(X_test),N,M),which = cv.out2$min)
+      scad_mad      <- median(abs(ash_scad_test - eta_test))
+      scad_mspe     <- mean((ash_scad_test - Y_test)^2)
+      scad_mse_test <- mean((ash_scad_test - eta_test)^2)
+      
+      SCAD_res[k,] <- c(length(scad_coefs[scad_coefs!=0]),
+                        length(scad_coefs[scad_coefs!=0 & sig_ind==1]), 
+                        scad_mse, scad_mad , scad_mspe, scad_mse_test, 
+                        mean((scad_coefs - eta_vec)^2), test3[3])
+    }
+    
+    test3 <- system.time(t1 <- try(cv.out3 <- MCP_func(Y,X,N,M), silent = TRUE))
+    
+    if(!(attr(t1,"class")=="try-error")){
+      mcp_coefs <- cv.out3$fit$beta[,cv.out3$min][-1]
+      ash_mcp <- predict(cv.out3,matrix(as.numeric(X),N,M),which = cv.out3$min)
+      mcp_mse <- mean((ash_mcp - eta_i)^2)
+      ash_mcp_test <- predict(cv.out3,matrix(as.numeric(X_test),N,M),which = cv.out3$min)
+      mcp_mspe     <- mean((ash_mcp_test - Y_test)^2)
+      mcp_mse_test <- mean((ash_mcp_test - eta_test)^2)
+      mcp_mad      <- median(abs(ash_mcp_test - eta_test))
+      
+      MCP_res[k,] <- c(length(mcp_coefs[mcp_coefs!=0]),
+                       length(mcp_coefs[mcp_coefs!=0 & sig_ind==1]), 
+                       mcp_mse, mcp_mad , mcp_mspe, mcp_mse_test, 
+                       mean((mcp_coefs - eta_vec)^2), test3[3])
+    }
+    
+    
+    #### SSLASSO
+    L <- 400
+    test3 <- system.time(t1 <- try(mod.out <- SSLASSO(X = X, y=Y, 
+                                                      variance = "unknown", lambda1 = 0.01, 
+                                                      lambda0 = seq(0.01,M,length.out=L)), 
+                                   silent = TRUE))
+    if(attr(t1,"class") == "SSLASSO"){
+      SSLASSO_coefs <- mod.out$beta[,L]
+      SSLASSO_pred  <- X%*%c(SSLASSO_coefs) + mod.out$intercept[L]
+      SSLASSO_mse <- mean((SSLASSO_pred - eta_i)^2)
+      SSLASSO_pred_test<- X_test%*%c(SSLASSO_coefs) + mod.out$intercept[L]
+      SSLASSO_mad      <- median(abs(SSLASSO_pred_test - eta_test))
+      SSLASSO_mspe     <- mean((SSLASSO_pred_test - Y_test)^2)
+      SSLASSO_mse_test <- mean((SSLASSO_pred_test - eta_test)^2)
+      
+      
+      SSLASSO_res[k,] <- c(length(mod.out$model),
+                           sum(mod.out$model %in% signal), 
+                           SSLASSO_mse, SSLASSO_mad , SSLASSO_mspe, SSLASSO_mse_test, 
+                           mean((SSLASSO_coefs - eta_vec)^2), test3[3])
+    }
+    
+    
+    #empirical Bayes method
+    if(ebreg_I){
+      
+      
+      n <- length(Y)
+      log.f <- function(x) log(1/n) + log(x <= n) #log prior of the model size
+      
+      test3 <- system.time(t1 <- try(out.ebreg <- ebreg( Y, X, rbind(X,X_test), standardized = FALSE, 
+                                                         alpha = 0.99, prior = TRUE, M = 2000, 
+                                                         log.f = log.f, sample.beta = TRUE, 
+                                                         pred = TRUE, conf.level = 0.95), 
+                                     silent = TRUE))
+      
+      if(is.null(attr(t1,"class"))){
+        
+        yhat_ebreg  <- out.ebreg$ynew.mean
+        # Proportion of test PIs that contain the test observation
+        ECP_PI <- mean(1*I(Y_test> out.ebreg$PI[1,401:800] & Y_test < out.ebreg$PI[2,401:800]))
+        
+        ebreg_pip   <- out.ebreg$incl.prob
+        ebreg_coefs <- out.ebreg$beta.mean*ebreg_pip
+        ebreg_pred  <- yhat_ebreg[1:400]
+        
+        ebreg_mse <- mean((ebreg_pred - eta_i)^2)
+        
+        ebreg_pred_test  <- yhat_ebreg[401:800]
+        ebreg_mad      <- median(abs(ebreg_pred_test - eta_test))
+        ebreg_mspe     <- mean((ebreg_pred_test - Y_test)^2 )
+        ebreg_mse_test <- mean((ebreg_pred_test - eta_test)^2)
+        
+        ebreg_res[k,] <- c(sum(ebreg_pip),
+                           sum(ebreg_pip*sig_ind), 
+                           ebreg_mse, ebreg_mad , ebreg_mspe, ebreg_mse_test, 
+                           mean((ebreg_coefs - eta_vec)^2), ECP_PI, test3[3])
+      }
+    }
+    
+    
+    test3 <- system.time(t1 <- try(test <- sparsevb::svb.fit(X=X, Y=Y, 
+                                                             family = "linear", 
+                                                             slab = "laplace",
+                                                             intercept = TRUE,
+    ), silent = TRUE))
+    
+    if(is.null(attr(t1,"class"))){
+      sparsevb_coefs <- test$mu * test$gamma #approximate posterior mean
+      sparsevb_pred  <- X%*%c(sparsevb_coefs) + test$intercept
+      sparsevb_mse <- mean((sparsevb_pred - eta_i)^2)
+      sparsevb_pred_test<- X_test%*%c(sparsevb_coefs) + test$intercept
+      sparsevb_mad      <- median(abs(sparsevb_pred_test - eta_test))
+      sparsevb_mspe     <- mean((sparsevb_pred_test - Y_test)^2)
+      sparsevb_mse_test <- mean((sparsevb_pred_test - eta_test)^2)
+      
+      E_step <- list(lfdr = test$gamma, p_vals = test$gamma, p_hat = 1)
+      svb_MTR <- MTR(E_step, alpha, signal)
+      
+      sparsevb_res[k,] <- c(svb_MTR$BH_sum$LFDR_sum[-3], 
+                            sparsevb_mse, sparsevb_mad , sparsevb_mspe, sparsevb_mse_test, 
+                            mean((sparsevb_coefs - eta_vec)^2), test3[3])
+      
+    }
+    
+    
+    if(ebreg_I){
+      k_res <- data.frame(rbind(round(PROBE_res[k,-c(1:2,7:10,14)],3),round(LASSO_res[k,],3),
+                                round(adap_LASSO_res[k,],3), round(SCAD_res[k,],3),
+                                round(MCP_res[k,],3), round(SSLASSO_res[k,],3),
+                                round(sparsevb_res[k,],3), round(ebreg_res[k,-8],3)))
+      colnames(k_res)[c(1:2,8)] <- c("TotRej", "TrueRej", "Time(sec)")
+      rownames(k_res) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
+                           "SPARSEVB","EBREG")
+    }
+    if(!ebreg_I){
+      k_res <- data.frame(rbind(round(PROBE_res[k,-c(1:2,7:10,14)],3),round(LASSO_res[k,],3),
+                                round(adap_LASSO_res[k,],3), round(SCAD_res[k,],3),
+                                round(MCP_res[k,],3), round(SSLASSO_res[k,],3),
+                                round(sparsevb_res[k,],3)))
+      colnames(k_res)[c(1:2,8)] <- c("TotRej", "TrueRej", "Time(sec)")
+      rownames(k_res) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
+                           "SPARSEVB")
+    }
+    
+    cat("Iteration",k,"finished.\n")
+    
+    if(verbose){
+      if(ebreg_I){print(round(ebreg_res[k,8],3))}
+      print(k_res)
+    }
+    sigma_vec <- c(sigma_vec,sd_noise)
+  }
+  
+  full_res <-   cbind(PROBE_res, LASSO_res, adap_LASSO_res, 
+                      SCAD_res, MCP_res, SSLASSO_res, sparsevb_res, 
+                      ebreg_res, M, M1, eta, sigma_vec, sig_nois)
+  
+  write.csv(full_res,
+            paste0(output,filname)
+  )
+  
+  
+  MSE_comb <- full_res[,grepl('MSE', colnames(full_res))]
+  MSPE_comb <- full_res[,grepl('MSPE', colnames(full_res))]
+  MAD_comb <- full_res[,grepl('MAD', colnames(full_res))]
+  beta_comb <- full_res[,grepl('Beta', colnames(full_res))]
+  ECP_res <- full_res[,grepl('ECP', colnames(full_res))]
+  time_res <- full_res[,grepl('time', colnames(full_res))]
+  cat("\n Summarizing some results:\n")
+  
+  avg_mse <- apply(MSE_comb,2,mean) ## 
+  avg_mspe <- apply(MSPE_comb,2,mean) ## 
+  med_mad <- apply(MAD_comb,2,median) ### 
+  avg_time <- apply(time_res,2,mean) ### 
+  avg_b_err <- apply(beta_comb,2,mean) 
+  avg_sig_probe <- mean(full_res[,grepl('Sigma2_est', colnames(full_res))])
+  mse_mat <- matrix(avg_mse,nrow = length(avg_mse)/2, ncol = 2, byrow = TRUE)
+  colnames(mse_mat) <- c("Train_MSE", "Test_MSE")
+  if(ebreg_I){
+    row.names(mse_mat) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
+                            "SPARSEVB", "EBREG")}
+  if(!ebreg_I){
+    rownames(mse_mat) <- c("PROBE","LASSO","ALASSO","SCAD","MCP","SSLASSO", 
+                           "SPARSEVB")
+  }
+  sig_dig <- ceiling(c(-log10(min(mse_mat)), -log10(min(avg_mspe)), -log(min(med_mad)), 
+                       -log10(min(avg_b_err)), -log10(min(avg_time)) ))+1
+  sig_dig[1:2] <- sig_dig[1:2] +1
+  sig_dig[sig_dig<1] <- 1
+  pred_mat <- data.frame( round(mse_mat, sig_dig[1]), Test_MSPE = round(avg_mspe, sig_dig[2]), 
+                          MAD = round(med_mad, sig_dig[3]), Beta_MSE = round(avg_b_err, sig_dig[4]), 
+                          Avg_time = round(avg_time, sig_dig[5]))
+  
+  cat("\n PROBE average estimated sigma2:",round(avg_sig_probe,2),"\n")
+  print(pred_mat)
+  
+  #cat("\n Average empirical coverage probabilities of 95% CI's and PI's:\n")
+  #print(apply(ECP_res,2,mean)) ### 
+  
+  full_res
+  # }
+}
+
+block.data.gen.robust <- function(
+    seed_val,
+    n,
+    p,
+    pi_0,
+    B,
+    number_of_G,
+    sd_random_intercept,
+    sd_beta,
+    SNR, # signal-to-noise ratio
+    n_test,
+    df
+){
+  
+  set.seed(seed_val)
+  
+  # true beta
+  # distribution of beta
+  beta <- numeric(p) # zeros
+  
+  G = sort(sample(1:B, number_of_G)) # Groups with non-zero signals out of the B groups
+  s = floor(p*pi_0) # number of non-zero signals in total
+  
+  seq_to_sample_from <- NULL
+  for (g in G) {
+    seq_to_sample_from <- c(
+      seq_to_sample_from,
+      seq(from = (g - 1)*p/B + 1, to = g*p/B)
+    )
+  }
+  
+  s_j = sort(sample(seq_to_sample_from,s))
+  
+  
+  beta[s_j] <- runif(s, 0, sd_beta) # sample non-zero coefficients in random locations
+  # change to normal?
+  # beta[s_j] <- rnorm(s, 0, sd_beta) # sample non-zero coefficients in random locations
+  
+  ## standard Gaussian design matrix ###
+  X_independent <- matrix(rnorm(n*p), n, p) 
+  
+  ## dependence ###
+  # block-wise random intercept
+  # random normal to each row
+  # more variance more dependence
+  re_mat <- matrix(
+    rep(rnorm(n*B, mean = 0, sd = sd_random_intercept), each = p/B), 
+    n, p, byrow = TRUE)
+  X <-  X_independent + re_mat
+  
+  # Errors
+  true_eta <- X %*% beta
+  
+  #signal-to-noise-ratio
+  # sd_noise not to confuse with tau_e (prior)
+  # var_noise == sd_noise^2
+  sd_noise <-  sqrt(var(true_eta) / SNR)
+  errors <- sd_noise[1] * rt(n, df)
+  
+  # Response
+  Y <- true_eta + errors
+  
+  
+  
+  if(!is.null(n_test)){
+    X_independent_test <- matrix(rnorm(n_test*p), n_test, p) 
+    
+    ## dependence ###
+    re_mat_test <- matrix(
+      rep(rnorm(n_test*B, mean = 0, sd = sd_random_intercept), each = p/B), 
+      n_test, p, byrow = TRUE)
+    X_test <-  X_independent_test + re_mat_test
+    
+    true_eta_test <- X_test %*% beta
+    
+    Y_test <- true_eta_test + rnorm(n_test, sd = sd_noise) 
+    
+  }
+  
+  data <- list(
+    Y = Y,
+    X = X,
+    Y_test = Y_test,
+    X_test = X_test,
+    beta = beta,
+    SNR = SNR,
+    G = G,
+    B = B,
+    s_j = s_j,
+    sd_noise = sd_noise
+  )
+  
+}
 
 block.data.gen <- function(
     seed_val,
@@ -501,6 +1318,335 @@ block.data.gen <- function(
   
 }
 
+block.data.gen2 <- function(
+    seed_val,
+    n,
+    p,
+    pi_0,
+    B,
+    number_of_G,
+    sd_random_intercept,
+    sd_beta,
+    SNR, # signal-to-noise ratio
+    n_test
+){
+  
+  set.seed(seed_val)
+  
+  # true beta
+  # distribution of beta
+  beta <- numeric(p) # zeros
+  
+  G = sort(sample(1:B, number_of_G)) # Groups with non-zero signals out of the B groups
+  s = floor(p*pi_0) # number of non-zero signals in total
+  
+  seq_to_sample_from <- NULL
+  for (g in G) {
+    seq_to_sample_from <- c(
+      seq_to_sample_from,
+      seq(from = (g - 1)*p/B + 1, to = g*p/B)
+    )
+  }
+  
+  s_j = sort(sample(seq_to_sample_from,s))
+  
+  
+  beta[s_j] <- runif(s, 0, sd_beta) # sample non-zero coefficients in random locations
+  # change to normal?
+  # beta[s_j] <- rnorm(s, 0, sd_beta) # sample non-zero coefficients in random locations
+  
+  ## standard Gaussian design matrix ###
+  X_independent <- matrix(rnorm(n*p), n, p) 
+  
+  ## dependence ###
+  # block-wise random intercept
+  # random normal to each row
+  # more variance more dependence
+  re_mat <- matrix(
+    rep(rnorm(n*B, mean = 0, sd = sd_random_intercept), each = p/B), 
+    n, p, byrow = TRUE)
+  X <-  X_independent + re_mat
+  
+  # Errors
+  true_eta <- X %*% beta
+  
+  #signal-to-noise-ratio
+  # sd_noise not to confuse with tau_e (prior)
+  # var_noise == sd_noise^2
+  
+  # SNR == var(true_eta)/var_noise
+  # SNR == var(true_eta)/sd_noise^2
+  # sqrt(SNR) == sqrt(var(true_eta)/sd_noise^2)  
+  # sqrt(SNR) == sqrt(var(true_eta)) / sd_noise
+  # sd_noise == sqrt(var(true_eta)) / sqrt(SNR)
+  sd_noise <-  sqrt(var(true_eta) / SNR)
+  
+  # sd_val <- sqrt(var(true_eta)/sd_noise)
+  
+  # Y <- true_eta + rnorm(n, sd = sd_val)  
+  errors <- rnorm(n, sd = sd_noise)
+  
+  # Response
+  Y <- true_eta + errors
+  
+  
+  
+  if(!is.null(n_test)){
+    X_independent_test <- matrix(rnorm(n_test*p), n_test, p) 
+    
+    ## dependence ###
+    re_mat_test <- matrix(
+      rep(rnorm(n_test*B, mean = 0, sd = sd_random_intercept), each = p/B), 
+      n_test, p, byrow = TRUE)
+    X_test <-  X_independent_test + re_mat_test
+    
+    true_eta_test <- X_test %*% beta
+    
+    Y_test <- true_eta_test + rnorm(n_test, sd = sd_noise) 
+    
+  }
+  
+  data <- list(
+    Y = Y,
+    X = X,
+    Y_test = Y_test,
+    X_test = X_test,
+    beta = beta,
+    SNR = SNR,
+    G = G,
+    B = B,
+    s_j = s_j,
+    sd_noise = sd_noise
+  )
+  
+}
+
+
+squared.exp.psl <- function(parlist, B, verbose = FALSE, seed = 1641){
+  
+
+  alpha <- 0.05
+  K <- B
+  N <- 400
+  lat_sp <- 10
+  sig_sp <- 20
+  adj <- 10
+  
+  ## Check if RandomFields package is available:
+  pkg <- .packages(all.available = TRUE)
+  RF <- FALSE
+  if(any(pkg == "RandomFields")){
+    RF <- TRUE
+    library(RandomFields)
+  }else{
+    cat("Warning: geoR will be used to generate data. This is time consuming, particularly for large M. \n")
+  }
+  
+  ## Initializing data outputs
+  PROBE_res <- matrix(0,K,17)
+  colnames(PROBE_res) <- c("M", "M1", "eta", "sigma", "sig_nois", "MSE", "MAD", "ECP_PI", 
+                           "ECP_CI", "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", "Beta_mse", 
+                           "Conv", "time","alpha")
+  sparsevb_res <- matrix(-999,K,8)
+  LASSO_res <- matrix(-999,K,8)
+  
+  
+  colnames(varbvs_res) <- c("Varbvs_Signals", "Varbvs_Corr_Signals", "Varbvs_MSE", "Varbvs_MAD", 
+                            "Varbvs_Test_MSPE", "Varbvs_Test_MSE", "Varbvs_Beta_mse", "Varbvs_time")
+  
+  colnames(sparsevb_res) <- c("sparsevb_Signals", "sparsevb_Corr_Signals", "sparsevb_MSE", 
+                              "sparsevb_MAD", "sparsevb_Test_MSPE", "sparsevb_Test_MSE", 
+                              "sparsevb_Beta_mse", "sparsevb_time")
+  
+  colnames(LASSO_res) <- c("lasso_Sum_delta","lasso_Sum_delta_sig", 
+                           "lasso_MSE", "lasso_MAD", 
+                           "lasso_Obs_test_MSPE", "lasso_test_MSE", "lasso_Beta_mse", "lasso_time")
+  
+   ## Set convergence criteria
+  maxit <- 100
+  ep <- 0.1
+  
+  filname <- paste0("PROB_LASS_SPARS_SPATIAL.csv")
+  print(filname)
+  
+  D <- nrow(parlist)
+  for(k in 1:K){
+    
+    par_num <- k %% D
+    if(par_num == 0){par_num <- D}
+    args_list <- parlist[par_num,]
+    
+    NUM <- as.numeric(args_list[1])
+    x <- seq(1, NUM, 1)
+    M <- NUM^2
+    M1 <- as.integer(M*as.numeric(args_list[2]))
+    p <- 1-as.numeric(args_list[2])
+    eta <-   as.numeric(args_list[3]) #Eta value
+    sig_nois <- as.numeric(args_list[4])
+    sigma <- as.numeric(args_list[5])
+    bin <- as.logical(args_list[6])
+    # Generate X and Signal Data
+    
+    cat(M,M1,eta,sig_nois,bin,"\n Generating data for iteration",k,"\n")
+    set.seed(seed + k)
+    if(RF){
+      data <- sim_bin_LR_RF(x, N, M, M1, sig_sp, lat_sp,  
+                            seed = seed + k)
+    }else{
+      data <- sim_bin_LR_geo(x,N,M,M1,sig_sp,lat_sp,seed = seed + k)
+    }
+    
+    #Signal and beta coefficients
+    signal <- data$signal
+    sig_ind <- data$sig_ind
+    t_eta <-  runif(M, 0, 2*eta)# 
+    LP_data <- data$LP_data
+    LP_data$signal <- sig_ind
+    LP_data$Signal <- factor((LP_data$signal-1))
+    
+    #X data
+    if(bin){X <- matrix(t(data$X), N, M)}else{X <- t(data$X_cont)}
+    
+    # Generate outcome
+    eta_vec <- sig_ind*array(t_eta)
+    eta_i <- apply(t(X)*c(eta_vec),2,sum)
+    Y <- eta_i + rnorm(N,0,sigma)
+    
+    # Generate Test Data
+    t_datamat <- t(data$test_data)
+    if(bin){
+      X_test <- matrix(1*I(t_datamat < 0), N, M)
+    }else{
+      X_test <- t_datamat
+    }
+    eta_test <- apply(t(X_test)*c(eta_vec),2,sum)
+    Y_test <- eta_test + rnorm(N,0,sigma)
+    
+    
+    cat("Fitting model for iteration",k,"\n")
+    #### all-at-once probe
+    test3 <- system.time(mod.out <- probe(Y = Y, X = X, 
+                                          adj = adj, 
+                                          verbose = TRUE, 
+                                          plot_ind = TRUE, 
+                                          eta_i = eta_i))
+    
+    alpha_est <- mod.out$Calb_mod$coef[2]
+    gamma_est <- mod.out$E_step$gamma
+    beta_est <- mod.out$beta_hat
+    beta_ast_est <- mod.out$beta_ast_hat
+    sigma2_est_new <- mod.out$Calb_mod$sigma2_est
+    Y_pred <- mod.out$Calb_mod$Y_pred
+    
+    #Prediction for test data
+    pred_res_test <- predict_probe_func(mod.out, X_test, Z = NULL, alpha = alpha)
+    # Proportion of test PIs that contain the test observation
+    ECP_PI <- mean(1*I(Y_test>pred_res_test$PI_L & Y_test<pred_res_test$PI_U))
+    # Proportion of test CIs that contain the test true signal
+    ECP_CI <- mean(1*I(eta_test>pred_res_test$CI_L & eta_test<pred_res_test$CI_U))
+    
+    PROBE_res[k,] <- c(M, M1, eta, sigma, sig_nois, 
+                       mean((Y_pred-eta_i)^2)/(sigma^2), 
+                       median(abs(Y_pred - eta_i)), ECP_PI, ECP_CI,   
+                       mod.out$count, sigma2_est_new, mean((Y_test - pred_res_test$Pred)^2), 
+                       mean((eta_test - pred_res_test$Pred)^2)/(sigma^2), 
+                       mean((eta_vec - beta_ast_est)^2),
+                       mod.out$conv, test3[3], alpha_est)
+    
+    #### LASSO
+    test3 <- system.time(cv.out <- lasso(Y,X))
+    
+    lasso_coefs <- coef(cv.out,s="lambda.min")[-1]
+    lasso_pred  <- predict(cv.out,newx = X,s="lambda.min")
+    lasso_mse <- mean((lasso_pred - eta_i)^2)
+    lasso_pred_test<- predict(cv.out,newx = X_test,s="lambda.min")
+    lasso_mad <- median(abs(lasso_pred_test - eta_test))
+    lasso_mspe     <- mean((lasso_pred_test - Y_test)^2)
+    lasso_mse_test <- mean((lasso_pred_test - eta_test)^2)
+    
+    
+    LASSO_res[k,] <- c(length(lasso_coefs[lasso_coefs!=0]),
+                       length(lasso_coefs[lasso_coefs!=0 & sig_ind==1]), 
+                       lasso_mse/(sigma^2), lasso_mad , lasso_mspe, lasso_mse_test/(sigma^2), 
+                       mean((lasso_coefs - eta_vec)^2), test3[3])
+    
+    
+    test3 <- system.time(t1 <- try(test <- svb.fit(X=X, Y=Y, family = "linear", slab = "laplace",
+                                                   intercept = TRUE), silent = TRUE))
+    
+    if(is.null(attr(t1,"class"))){
+      sparsevb_coefs <- test$mu * test$gamma #approximate posterior mean
+      sparsevb_pred  <- X%*%c(sparsevb_coefs) + test$intercept
+      sparsevb_mse <- mean((sparsevb_pred - eta_i)^2)
+      sparsevb_mad <- median(abs(sparsevb_pred - eta_i))
+      sparsevb_pred_test<- X_test%*%c(sparsevb_coefs) + test$intercept
+      sparsevb_mspe     <- mean((sparsevb_pred_test - Y_test)^2)
+      sparsevb_mse_test <- mean((sparsevb_pred_test - eta_test)^2)
+      
+      
+      sparsevb_res[k,] <- c(sum(test$gamma ),
+                            sum(test$gamma*sig_ind), 
+                            sparsevb_mse/(sigma^2), sparsevb_mad , sparsevb_mspe, sparsevb_mse_test/(sigma^2), 
+                            mean((sparsevb_coefs - eta_vec)^2), test3[3])
+      
+    }
+    
+    
+      k_res <- data.frame(rbind(round(PROBE_res[k,-c(3:5,5:8+3,12+3)],3),
+                                round(c(LASSO_res[k,],NA),3),
+                                round(c(sparsevb_res[k,],NA),3)
+                                ))
+      colnames(k_res)[c(1:2,8)] <- c("Sum_gamma", "Sum_correct_gamma", "Time(sec)")
+      rownames(k_res) <- c("PROBE","LASSO","SPARSEVB")
+      
+    
+    cat("Iteration",k,"finished.\n")
+    
+    if(verbose){
+      print(round(c(PROBE_res[k,c(5,7,8)+3]),3))
+      print(k_res[,-c(1:2)])
+    }
+  }
+  
+  full_res <-   cbind(PROBE_res, LASSO_res, sparsevb_res)
+  
+  write.csv(full_res,filname)
+  
+  
+  MSE_comb <- full_res[,grepl('MSE', colnames(full_res))]
+  MSPE_comb <- full_res[,grepl('MSPE', colnames(full_res))]
+  MAD_comb <- full_res[,grepl('MAD', colnames(full_res))]
+  beta_comb <- full_res[,grepl('Beta', colnames(full_res))]
+  ECP_res <- full_res[,grepl('ECP', colnames(full_res))]
+  time_res <- full_res[,grepl('time', colnames(full_res))]
+  cat("\n Summarizing some results:\n")
+  
+  avg_mse <- apply(MSE_comb,2,mean) ## 
+  avg_mspe <- apply(MSPE_comb,2,mean) ## 
+  med_mad <- apply(MAD_comb,2,median) ### 
+  avg_time <- apply(time_res,2,mean) ### 
+  avg_b_err <- apply(beta_comb,2,mean) 
+  avg_sig_probe <- apply(full_res[,grepl('Sigma2_est', colnames(full_res))],2,mean)
+  mse_mat <- matrix(avg_mse,nrow = length(avg_mse)/2, ncol = 2, byrow = TRUE)
+  colnames(mse_mat) <- c("Train_MSE", "Test_MSE")
+
+    rownames(mse_mat) <- c("PROBE","LASSO","SPARSEVB")
+  sig_dig <- ceiling(c(-log10(min(mse_mat)), -log10(min(avg_mspe)), -log(min(med_mad)), 
+                       -log10(min(avg_b_err)), -log10(min(avg_time)) ))+1
+  sig_dig[1:2] <- sig_dig[1:2] +1
+  sig_dig[sig_dig<1] <- 1
+  pred_mat <- data.frame( round(mse_mat, sig_dig[1]), Test_MSPE = round(avg_mspe, sig_dig[2]), 
+                          MAD = round(med_mad, sig_dig[3]), Beta_MSE = round(avg_b_err, sig_dig[4]), 
+                          Avg_time = round(avg_time, sig_dig[5]))
+  
+  cat("\n PROBE and PROBE_one average estimated sigma2:",round(avg_sig_probe,2),"\n")
+  print(pred_mat)
+  
+  
+  full_res
+}
+
+
 squared.exp <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641){
   
   NUM <- as.numeric(args_list[1])
@@ -512,28 +1658,28 @@ squared.exp <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641){
   p <- 1-as.numeric(args_list[2])
   alpha <- 0.05
   eta <-   as.numeric(args_list[3]) #Eta value
-  eta_var <- (eta*sqrt(pi)/sqrt(2))^2
   sig_nois <- as.numeric(args_list[4])
   sigma <- as.numeric(args_list[5])
   bin <- as.logical(args_list[6])
   lat_sp <- 10
   sig_sp <- 20
   adj <- 10
-
+  
   ## Check if RandomFields package is available:
   pkg <- .packages(all.available = TRUE)
   RF <- FALSE
   if(any(pkg == "RandomFields")){
     RF <- TRUE
+    library(RandomFields)
   }else{
-      cat("Warning: geoR will be used to generate data. This is time consuming, particularly for large M. \n")
-    }
+    cat("Warning: geoR will be used to generate data. This is time consuming, particularly for large M. \n")
+  }
   
   ## Initializing data outputs
   PROBE_res <- matrix(0,K,13)
   colnames(PROBE_res) <- c("Sum_delta", "Sum_delta_sig", "MSE", "MAD", "ECP_PI", 
-                             "ECP_CI", "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", "Beta_mse", 
-                             "Conv", "time")
+                           "ECP_CI", "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", "Beta_mse", 
+                           "Conv", "time")
   PROBE_one_res <- matrix(0,K,11)
   colnames(PROBE_one_res) <- paste0("probe_one_",c("Sum_delta", "Sum_delta_sig", "MSE", "MAD", 
                                                    "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", 
@@ -596,9 +1742,10 @@ squared.exp <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641){
     cat("Generating data for iteration",k,"\n")
     set.seed(seed + k)
     if(RF){
-      data <- sim_bin_LR_RF(x,N,M,M1,sig_sp,lat_sp,eta_var,seed = seed + k)
+      data <- sim_bin_LR_RF(x, N, M, M1, sig_sp, lat_sp,  
+                            seed = seed + k)
     }else{
-      data <- sim_bin_LR_geo(x,N,M,M1,sig_sp,lat_sp,eta_var,seed = seed + k)
+      data <- sim_bin_LR_geo(x,N,M,M1,sig_sp,lat_sp,seed = seed + k)
     }
     
     #Signal and beta coefficients
@@ -631,7 +1778,7 @@ squared.exp <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641){
     cat("Fitting model for iteration",k,"\n")
     #### all-at-once probe
     test3 <- system.time(mod.out <- probe(Y = Y, X = X, 
-                                          adj = adj))
+                                          adj = adj, verbose = TRUE, plot_ind = TRUE, eta_i = eta_i))
     
     alpha_est <- mod.out$Calb_mod$coef[2]
     gamma_est <- mod.out$E_step$gamma
@@ -658,7 +1805,7 @@ squared.exp <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641){
     
     #### LASSO
     test3 <- system.time(cv.out <- lasso(Y,X))
-
+    
     lasso_coefs <- coef(cv.out,s="lambda.min")[-1]
     lasso_pred  <- predict(cv.out,newx = X,s="lambda.min")
     lasso_mse <- mean((lasso_pred - eta_i)^2)
@@ -939,7 +2086,7 @@ squared.exp <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641){
                            "VARBVS","SPARSEVB")
   }
   sig_dig <- ceiling(c(-log10(min(mse_mat)), -log10(min(avg_mspe)), -log(min(med_mad)), 
-               -log10(min(avg_b_err)), -log10(min(avg_time)) ))+1
+                       -log10(min(avg_b_err)), -log10(min(avg_time)) ))+1
   sig_dig[1:2] <- sig_dig[1:2] +1
   sig_dig[sig_dig<1] <- 1
   pred_mat <- data.frame( round(mse_mat, sig_dig[1]), Test_MSPE = round(avg_mspe, sig_dig[2]), 
@@ -954,8 +2101,8 @@ squared.exp <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641){
 }
 
 
-sim_bin_LR_geo <- function(x, N, M, M1, sig_sp, lat_sp, eta_var, 
-                         seed=NULL){
+sim_bin_LR_geo <- function(x, N, M, M1, sig_sp, lat_sp, 
+                           seed=NULL){
   
   if(is.null(seed)){seed = 238476}
   set.seed(seed)
@@ -1010,8 +2157,8 @@ sim_bin_LR_geo <- function(x, N, M, M1, sig_sp, lat_sp, eta_var,
 }
 
 
-sim_bin_LR_RF <- function(lat_data, err_sd, x, N, M, M1, sig_sp, lat_sp, eta_var, 
-                         seed=NULL){
+sim_bin_LR_RF <- function(x, N, M, M1, sig_sp, lat_sp,
+                          seed=NULL){
   
   if(!is.null(seed)){set.seed(seed)}
   x1 <- x2 <- 1:as.integer(sqrt(M))
@@ -1023,29 +2170,35 @@ sim_bin_LR_RF <- function(lat_data, err_sd, x, N, M, M1, sig_sp, lat_sp, eta_var
   LP_data$signal     <- as.integer(signal_data)+1
   RE_eff <- rnorm(N)
   
-  t_eta <- RFsimulate(model = RMstable(alpha = 2, scale = sig_sp,var = eta_var), x=x, y=x,grid=TRUE,n=1)
+  # t_eta <- RFsimulate(model = RMstable(alpha = 2, scale = sig_sp, var = eta_var), x=x, y=x,grid=TRUE,n=1)
   t_data <- RFsimulate(model = RMstable(alpha = 2, scale = lat_sp,var = 1), x=x, y=x,grid=TRUE,n=N)
   
-  RE_eff <- rnorm(N)
-  t_datamat <- t(matrix(array(t_data),M,N))+RE_eff*err_sd
-  Z_cont <- t(t(t_datamat)+c(array(lat_data)))
+  Z_cont <- matrix(array(t_data),M,N)
   Z <- 1*I(Z_cont < 0)
+  
+  t_data <- RFsimulate(model = RMstable(alpha = 2, scale = lat_sp,var = 1), x=x, y=x,grid=TRUE,n=N)
+  test_data = matrix(array(t_data),M,N)
   
   signal<- seq(1,M,1)[LP_data$signal==2]
   sig_ind <- rep(0,M)
   sig_ind[signal] <- 1
   
   
-  return(list(LP_data=LP_data,Z=Z, Z_cont = Z_cont,RE_eff=RE_eff,eta = t_eta,signal=signal,sig_ind=sig_ind))
+  return(list(LP_data=LP_data, 
+              X=Z, 
+              X_cont = Z_cont, 
+              test_data = test_data,
+              signal=signal,
+              sig_ind=sig_ind))
 }
 
 
 lasso <- function(Y,X){
   cv.out <- cv.glmnet(X,Y,alpha = 1,nfolds = 10,lambda.min.ratio=0.001)
-  while(cv.out$lambda.min==min(cv.out$lambda)){
-    ### Further decreasing the lambda if the smallest lambda was the best.
-    cv.out <- cv.glmnet(X,Y,alpha = 1,nfolds = 10,lambda=exp(c(log(cv.out$lambda.1se),seq(log(min(cv.out$lambda)),log(min(cv.out$lambda)*0.001),length.out = 100))))
-  }
+  # while(cv.out$lambda.min==min(cv.out$lambda)){
+  #   ### Further decreasing the lambda if the smallest lambda was the best.
+  #   cv.out <- cv.glmnet(X,Y,alpha = 1,nfolds = 10,lambda=exp(c(log(cv.out$lambda.1se),seq(log(min(cv.out$lambda)),log(min(cv.out$lambda)*0.001),length.out = 100))))
+  # }
   cv.out
 }
 
@@ -1055,35 +2208,82 @@ adap_lasso <- function(Y,X){
   cv.out <- cv.glmnet(X, Y, alpha = 1, nfolds = 10, lambda.min.ratio = 0.001,
                       penalty.factor = 1 / abs(best_ridge_coef))
   
-  while(cv.out$lambda.min==min(cv.out$lambda)){
-    ### Further decreasing the lambda if the smallest lambda was the best.
-    cv.out <- cv.glmnet(X, Y, alpha = 1, nfolds = 10,
-                        penalty.factor = 1 / abs(best_ridge_coef),
-                        lambda=exp(c(log(cv.out$lambda.1se), 
-                                     seq(log(min(cv.out$lambda)),
-                                         log(min(cv.out$lambda)*0.001),
-                                         length.out = 100))) )
-  }
+  # while(cv.out$lambda.min==min(cv.out$lambda)){
+  #   ### Further decreasing the lambda if the smallest lambda was the best.
+  #   cv.out <- cv.glmnet(X, Y, alpha = 1, nfolds = 10,
+  #                       penalty.factor = 1 / abs(best_ridge_coef),
+  #                       lambda=exp(c(log(cv.out$lambda.1se), 
+  #                                    seq(log(min(cv.out$lambda)),
+  #                                        log(min(cv.out$lambda)*0.001),
+  #                                        length.out = 100))) )
+  # }
   list(cv.out = cv.out, 
        best_ridge_coef = best_ridge_coef)
 }
 
 scad_func <- function(Y,X,N,M){
   cv.out2 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "SCAD",lambda.min=0.01, max.iter = 50000)
-  while(cv.out2$lambda.min==min(cv.out2$lambda)){
-    ### Further decreasing the lambda if the smallest lambda was the best.
-    cv.out2 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "SCAD",lambda=exp(seq(log(min(cv.out2$lambda)),log(min(cv.out2$lambda)/100),length.out = 20)), max.iter = 50000)
-  }
+  # while(cv.out2$lambda.min==min(cv.out2$lambda)){
+  #   ### Further decreasing the lambda if the smallest lambda was the best.
+  #   cv.out2 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "SCAD",lambda=exp(seq(log(min(cv.out2$lambda)),log(min(cv.out2$lambda)/100),length.out = 20)), max.iter = 50000)
+  # }
   cv.out2
 }
 
 MCP_func <- function(Y,X,N,M){
   cv.out3 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "MCP",lambda.min=0.01, max.iter = 50000)
-  while(cv.out3$lambda.min==min(cv.out3$lambda)){
-    ### Further decreasing the lambda if the smallest lambda was the best.
-    cv.out3 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "MCP",lambda=exp(seq(log(min(cv.out3$lambda)),log(min(cv.out3$lambda)/100),length.out = 20)), max.iter = 50000)
-  }
+  # while(cv.out3$lambda.min==min(cv.out3$lambda)){
+  #   ### Further decreasing the lambda if the smallest lambda was the best.
+  #   cv.out3 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "MCP",lambda=exp(seq(log(min(cv.out3$lambda)),log(min(cv.out3$lambda)/100),length.out = 20)), max.iter = 50000)
+  # }
   cv.out3
+}
+
+
+MTR <- function(E_step, alpha, signal = NULL) {
+  
+  p_vals <- E_step$p_vals
+  lfdr_val <- E_step$lfdr
+  p_hat <- E_step$pi0
+  M <- length(p_vals)
+  alpha_hat <- alpha/p_hat
+  
+  T_R <- p.adjust(p_vals, method = "BY")
+  R_BH <- p.adjust(p_vals, method = "BH")
+  
+  threshold <- 0
+  lfdr_val[is.na(lfdr_val)] <- 1
+  if (min(lfdr_val) < alpha) {
+    threshold <- max(sort(lfdr_val)[cumsum(sort(lfdr_val)) < alpha])
+  }
+  
+  BH_res <- data.frame(BY = 1 * I(T_R < alpha), BH = 1 * I(R_BH < alpha), 
+                       LFDR = 1 * I(lfdr_val <= threshold))
+  
+  R_BY <- p.adjust(p_vals, method = "bonferroni")
+  R2_BY <- p.adjust(p_vals, method = "holm")
+  
+  Bonf_res <- data.frame(Holm = 1 * I(R2_BY < alpha), Bonf = 1 * I(R_BY < alpha))
+  
+  BH_sum <- apply(BH_res,2,sum)
+  Bonf_sum <- apply(Bonf_res,2,sum)
+  if (!is.null(signal)) {
+    n_signal <- !(1:M %in% signal)
+    BH_sum <- c(sum(BH_res$BH), sum(BH_res$BH[signal]), sum(BH_res$BH[n_signal]))
+    LFDR_res <- c(sum(BH_res$LFDR), sum(BH_res$LFDR[signal]), sum(BH_res$LFDR[n_signal]))
+    BY_res <- c(sum(BH_res$BY), sum(BH_res$BY[signal]), sum(BH_res$BY[n_signal]))
+    BH_sum <- data.frame(BY_sum = BY_res, LFDR_sum = LFDR_res, BH_sum = BH_sum)
+    
+    Bonf_sum <- c(sum(Bonf_res$Bonf), sum(Bonf_res$Bonf[signal]), sum(Bonf_res$Bonf[n_signal]))
+    Holm_res2 <- c(sum(Bonf_res$Holm), sum(Bonf_res$Holm[signal]), 
+                   sum(Bonf_res$Holm[n_signal]))
+    
+    Bonf_sum <- data.frame(Holm_sum = Holm_res2, Bonf_sum = Bonf_sum)
+  }
+  
+  
+  return(list(BH_res = BH_res, Bonf_res = Bonf_res, Bonf_sum = Bonf_sum, 
+              BH_sum = BH_sum))
 }
 
 
