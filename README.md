@@ -292,13 +292,13 @@ head(cbind(Y_test, pred_res))
 True and estimated values of the $\omega$ coefficients.
 
 ``` r
-cbind(true_omega, res$omega)
+cbind(omega_tr, res$omega)
 ```
 
 True versus estimated $\beta$ coeffiecients.
 
 ``` r
-plot(true_beta_signals, 
+plot(beta_tr, 
      res$beta_ast_hat, 
      xlab = "True Beta", 
      ylab = "Estimated Beta")
@@ -308,7 +308,7 @@ abline(coef = c(0,1))
 Confusion matrix of true versus estimated signals using 0.5 cutoff.
 
 ``` r
-table(true_beta_signals==0, res$gamma_hat<0.5)
+table(beta_tr==0, res$gamma_hat<0.5)
 ```
 
 # References
