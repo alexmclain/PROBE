@@ -2,7 +2,7 @@
 #' @description A wrapper function for the one-at-a-time variant of the PROBE algorithm.
 #' @usage probe_one(Y, X, ep = 0.001, maxit = 10000, Y_test = NULL, X_test = NULL, 
 #' verbose = FALSE, signal = NULL, eta_i = NULL, alpha = 0.05, plot_ind = FALSE, 
-#' order.method = "lasso", adj = 10, delta = 0.4, update_order= NULL, beta_start= NULL)
+#' order.method = "lasso", adj = 10, delta = 0.4, update_order= NULL, beta_start= NULL, seed = 8675309)
 #' 
 
 #' @param Y The outcome variable.
@@ -75,7 +75,7 @@
 probe_one <- function(Y, X, ep = 0.001, maxit = 10000, Y_test = NULL, X_test = NULL, 
                       verbose = FALSE, signal = NULL, eta_i = NULL, alpha = 0.05, plot_ind = FALSE, 
                       order.method = "lasso", adj = 10, delta = 0.4, update_order= NULL, 
-                      beta_start= NULL) {
+                      beta_start= NULL, seed = 8675309) {
   
   ### The one at a time probe.
   M <- dim(X)[2]
@@ -101,21 +101,21 @@ probe_one <- function(Y, X, ep = 0.001, maxit = 10000, Y_test = NULL, X_test = N
     stop("update_order and beta_start must be given for update.order='none'.")
   }
   if(order.method == "lasso"){
-    set.seed(546646+floor(max(Y^2)))
+    set.seed(seed)
     foldid = sample(rep(1:10,ceiling(N/10)),N)
     r.out <- cv.glmnet(X,Y,alpha = 1,lambda.min.ratio=0.001, foldid = foldid)
     beta_start <- coef(r.out,s="lambda.min")[-1]
     update_order = order(abs(coef(r.out,s="lambda.min")[-1]), decreasing = TRUE)
   }
   if(order.method == "ridge"){
-    set.seed(546646+floor(max(Y^2)))
+    set.seed(seed)
     foldid = sample(rep(1:10,ceiling(N/10)),N)
     r.out <- cv.glmnet(X,Y,alpha = 0,lambda.min.ratio=0.001, foldid = foldid)
     beta_start <- coef(r.out,s="lambda.min")[-1]
     update_order = order(abs(coef(r.out,s="lambda.min")[-1]), decreasing = TRUE)
   }
   if(order.method == "random"){
-    set.seed(546646+floor(max(Y^2)))
+    set.seed(seed)
     update_order <- sample(1:M,M)
     beta_start <- rep(0.0001,M)
     

@@ -6,7 +6,7 @@
 \usage{
 probe_one(Y, X, ep = 0.001, maxit = 10000, Y_test = NULL, X_test = NULL, 
 verbose = FALSE, signal = NULL, eta_i = NULL, alpha = 0.05, plot_ind = FALSE, 
-order.method = "lasso", adj = 10, delta = 0.4, update_order= NULL, beta_start= NULL)
+order.method = "lasso", adj = 10, delta = 0.4, update_order= NULL, beta_start= NULL, seed = 8675309)
 }
 \arguments{
 \item{Y}{The outcome variable.}
