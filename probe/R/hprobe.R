@@ -36,7 +36,7 @@
 #' \code{count} the total number of iterations before convergence. 
 #' 
 #' @seealso predict_probe_func to obtain predictions, credible intervals and prediction intervals from PROBE.
-#' @references \itemize{ \item McLain, AC, A Zgodic, H Bondell (2025). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. \textit{Computational Statistics and Data Analysis} 207, 108146.
+#' @references \itemize{ \item McLain, AC, A Zgodic, H Bondell (2025). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. \emph{Computational Statistics and Data Analysis} 207, 108146.
 #' \item Zgodic, A., Bai, R., Zhang, J., Wang, Y., Rorden, C., & McLain, A. (2023). Quantifying predictive uncertainty of aphasia severity in stroke patients with sparse heteroscedastic Bayesian high-dimensional regression. arXiv preprint arXiv:2309.08783.}
 #' @examples
 #' ### Example
@@ -438,7 +438,7 @@ m_step_regression.h <- function(Y, W, W2, V, Sigma_y_inv,
                ( c_param*rep(1, ncol(V)) %*% exp((c_param^(-0.5))*(1/sigma2_omega)*diag(ncol(V))%*%par) ) )
   }
   
-  optim_results <- optim(par = rep(0,ncol(V)) , fn = log.lklh.MLG,
+  optim_results <- stats::optim(par = rep(0,ncol(V)) , fn = log.lklh.MLG,
                          V = V, Y = Y, alphaW = beta_w,
                          Wmat = Wmat, c_param = c_param,
                          sigma2_omega = sigma2_omega, method = "BFGS")

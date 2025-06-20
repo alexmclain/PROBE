@@ -37,8 +37,8 @@
 #' \code{count} the total number of iterations before convergence. 
 #' 
 #' @seealso predict_probe_func to obtain predictions.
-#' @references 
-#' McLain, A. C., Zgodic, A., & Bondell, H. (2022). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. arXiv preprint arXiv:2209.08139..
+#' @references \itemize{ \item McLain, AC, A Zgodic, H Bondell (2025). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. \emph{Computational Statistics and Data Analysis} 207, 108146.
+#' }
 #' @examples
 #' ### Example
 #' data(Sim_data)

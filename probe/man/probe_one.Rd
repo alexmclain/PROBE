@@ -95,7 +95,8 @@ sum(gamma_est[beta_tr>0])
 
 }
 \references{
-McLain, A. C., Zgodic, A., & Bondell, H. (2022). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. arXiv preprint arXiv:2209.08139..
+\itemize{ \item McLain, AC, A Zgodic, H Bondell (2025). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. \emph{Computational Statistics and Data Analysis} 207, 108146.
+}
 }
 \seealso{
 predict_probe_func to obtain predictions.
