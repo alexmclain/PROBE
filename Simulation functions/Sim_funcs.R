@@ -2254,7 +2254,7 @@ MTR <- function(E_step, alpha, signal = NULL) {
   threshold <- 0
   lfdr_val[is.na(lfdr_val)] <- 1
   if (min(lfdr_val) < alpha) {
-    threshold <- max(sort(lfdr_val)[cumsum(sort(lfdr_val)) < alpha])
+    threshold <- max(sort(lfdr_val)[cumsum(sort(lfdr_val)) < alpha*(1:M)])
   }
   
   BH_res <- data.frame(BY = 1 * I(T_R < alpha), BH = 1 * I(R_BH < alpha), 

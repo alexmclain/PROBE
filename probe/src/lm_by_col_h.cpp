@@ -7,7 +7,7 @@
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-List LM_by_col_h(const arma::vec y, const arma::mat X, double sigma2, const arma::mat Sigma_y_inv) {
+List LM_by_col_h(const arma::vec y, const arma::mat X, const arma::mat Sigma_y_inv) {
   
   int n = X.n_rows, d = X.n_cols;
   
@@ -41,7 +41,6 @@ List LM_by_col_h(const arma::vec y, const arma::mat X, double sigma2, const arma
   
   return List::create(Named("Coefficients") = coef_mat,Named("StdErr") = se);
 }
-
 
 
 
