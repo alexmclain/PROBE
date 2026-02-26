@@ -9,7 +9,7 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 List PROBE_cpp0_5_6_covs_h(const arma::vec y, const arma::mat Z, const arma::colvec Wt, 
                     const arma::colvec W_var, const arma::colvec delta, 
-                    const arma::colvec beta_vec, const arma::mat Z2, double sigma2, 
+                    const arma::colvec beta_vec, const arma::mat Z2, 
 		    const arma::mat X, const arma::mat Sigma_y_inv) {
   
   // Getting the dimensions and initializing outputs
@@ -64,7 +64,6 @@ List PROBE_cpp0_5_6_covs_h(const arma::vec y, const arma::mat Z, const arma::col
   return List::create(Named("Coefficients") = coef_mat,Named("StdErr") = se, 
                       Named("T_statistics") = T_vals);
 }
-
 
 
 

@@ -9,7 +9,7 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 List PROBE_cpp0_5_6_h(const arma::vec y, const arma::mat Z, const arma::colvec Wt, 
                     const arma::colvec W_var, const arma::colvec delta, 
-                    const arma::colvec beta_vec, const arma::mat Z2, double sigma2, 
+                    const arma::colvec beta_vec, const arma::mat Z2, 
 		    const arma::mat Sigma_y_inv) {
  
   // Matrix multiplication with Z and Sigma_y_inv outside of the loop
@@ -86,7 +86,6 @@ List PROBE_cpp0_5_6_h(const arma::vec y, const arma::mat Z, const arma::colvec W
   return List::create(Named("Coefficients") = coef_mat,Named("StdErr") = se, 
                       Named("T_statistics") = T_vals);
 }
-
 
 
 

@@ -138,21 +138,15 @@ hprobe_func <- function(Y, X, Z = NULL,
     
     # Performing the M-step.
     if (count == 1 & try2 == 0) {
-      
-      # remove: LR_update <- lr_cpp_func(Y, X, Z, sigma2)
-      LR_update <- lr_cpp_func.h(Y, X, Z, sigma2, Sigma_y_inv) #new 
+      LR_update <- lr_cpp_func.h(Y, X, Z, Sigma_y_inv) #new 
       
       beta_t_new <- c(LR_update$coef[,2])
       # Performing the damping step
       beta_t   <- beta_t*(1-fact) + beta_t_new*fact
       beta_var <- beta_var_old*(1-fact) + (LR_update$obs_SE[,2])^2*fact
     }else {
-      # remove: LR_update <- m_step_cpp_func(Y, X, Z, W_ast, 
-      #                              W_ast_var, gamma, 
-      #                              beta_t, X_2, sigma2) 
-      
       LR_update <- m_step_cpp_func.h(Y, X, Z, W_ast, W_ast_var, gamma,
-                                     beta_t, X_2, sigma2, Sigma_y_inv) #new
+                                     beta_t, X_2, Sigma_y_inv) #new
       
       beta_t_new <- c(LR_update$coef[,2])
       # Performing the damping step
@@ -454,19 +448,19 @@ m_step_regression.h <- function(Y, W, W2, V, Sigma_y_inv,
 
 # new: added a new argument for this function 'Sigma_y_inv' 
 m_step_cpp_func.h <- function(Y, X, Z = NULL, W_ast, W_ast_var, gamma, 
-                              beta_vec, X_2, sigma2, Sigma_y_inv) {
+                              beta_vec, X_2, Sigma_y_inv) {
   
   N <- length(Y)
   if (!is.null(Z)) {
     # remove: LRcpp <- PROBE_cpp0_5_6_covs(Y, X, W_ast, W_ast_var, gamma, 
     #                              beta_vec, X_2, sigma2, as.matrix(Z))
     LRcpp <- PROBE_cpp0_5_6_covs_h(Y, X, W_ast, W_ast_var, gamma,
-                                   beta_vec, X_2, sigma2, as.matrix(Z), Sigma_y_inv) #new
+                                   beta_vec, X_2, as.matrix(Z), Sigma_y_inv) #new
   } else {
     # remove: LRcpp <- PROBE_cpp0_5_6(Y, X, W_ast, W_ast_var, gamma, 
     #                         beta_vec, X_2, sigma2)
     LRcpp <- PROBE_cpp0_5_6_h(Y, X, W_ast, W_ast_var, gamma,
-                              beta_vec, X_2, sigma2, Sigma_y_inv) #new
+                              beta_vec, X_2, Sigma_y_inv) #new
   }
   
   ret <- list(coef = LRcpp$Coefficients, obs_SE = LRcpp$StdErr)
@@ -475,15 +469,15 @@ m_step_cpp_func.h <- function(Y, X, Z = NULL, W_ast, W_ast_var, gamma,
 }
 
 # new: a new argument 'Sigma_y_inv' was added to this function
-lr_cpp_func.h <- function(Y, X, Z = NULL, sigma2, Sigma_y_inv) {
+lr_cpp_func.h <- function(Y, X, Z = NULL, Sigma_y_inv) {
   
   N <- length(Y)
   if (!is.null(Z)) {
     # remove: LRcpp <- LM_w_COVS_by_col(Y, X, as.matrix(Z), sigma2)
-    LRcpp <- LM_w_COVS_by_col_h(Y, X, as.matrix(Z), sigma2, Sigma_y_inv) #new
+    LRcpp <- LM_w_COVS_by_col_h(Y, X, as.matrix(Z), Sigma_y_inv) #new
   } else {
     # remove: LRcpp <- LM_by_col(Y, X, sigma2)
-    LRcpp <- LM_by_col_h(Y, X, sigma2, Sigma_y_inv) #new
+    LRcpp <- LM_by_col_h(Y, X, Sigma_y_inv) #new
   }
   t_val <- LRcpp$Coefficients[, 2]/LRcpp$StdErr[, 2]
   
@@ -608,6 +602,5 @@ plot_probe_func <- function(full_res, test_plot, alpha, signal) {
   }
   
 }
-
 
 
