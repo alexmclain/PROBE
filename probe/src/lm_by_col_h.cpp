@@ -28,8 +28,6 @@ List LM_by_col_h(const arma::vec y, const arma::mat X, const arma::mat Sigma_y_i
     // Updating beta
     arma::colvec coef = X2SX2_inv*arma::trans(X2)* StY;
     arma::colvec resid = y - X2*coef; 
-
-    double sig2 = sigma2;
     arma::colvec stderrest = 
       arma::sqrt(arma::diagvec( X2SX2_inv ));
 
