@@ -1,5 +1,5 @@
-\name{h_Sim_data}
-\alias{h_Sim_data}
+\name{h_sim_data}
+\alias{h_sim_data}
 \docType{data}
 \title{
 Simulated high-dimensional data set for sparse linear regression with heterogeneous errorss
@@ -7,7 +7,7 @@ Simulated high-dimensional data set for sparse linear regression with heterogene
 \description{
 This dataset was simulated using a \eqn{20 \times 20} 2-dimensional setting described in the reference. The data contains 200 subjects with one outcome, 400 predictor variables, and 6 variables that are related to the variance of the error term. The data contains training and test data, along with the true values of the parameters used to generate the data..
 }
-\usage{data("h_Sim_data")}
+\usage{data("h_sim_data")}
 \format{
   A data frame with 200 observations and the following objects:
   \describe{
@@ -20,9 +20,7 @@ This dataset was simulated using a \eqn{20 \times 20} 2-dimensional setting desc
 }
 \source{Simulated data.}
 \examples{
-data(h_Sim_data)
-attach(h_sim_data)
-length(Y)
-dim(X)
+data(h_sim_data)
+str(h_sim_data)
 }
 \keyword{datasets}

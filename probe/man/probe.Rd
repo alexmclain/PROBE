@@ -35,7 +35,7 @@ plot_ind = FALSE, adj = 5)
 
 \item{plot_ind}{A logical values (True/False) for whether to output plots on algorithm results and progress (default = FALSE)}
 
-\item{adj}{Bandwidth parameter for empirical Bayes E-step. The bandwidth will be equal to \code{adj} times Silverman's 'rule of thumb' (default = 2).}
+\item{adj}{Bandwidth parameter for empirical Bayes E-step. The bandwidth will be equal to \code{adj} times Silverman's 'rule of thumb' (default = 5).}
 }
 \value{
 A list including 
@@ -61,15 +61,22 @@ A wrapper function for the all-at-once variant of the PROBE algorithm.
 ### Example
 data(Sim_data)
 data(Sim_data_test)
-attach(Sim_data)
-attach(Sim_data_test)
-alpha <- 0.05
-plot_ind <- TRUE
-adj <- 10
+
+## Get training and test data
+Y <- Sim_data$Y
+X <- Sim_data$X
+Y_test <- Sim_data_test$Y_test
+X_test <- Sim_data_test$X_test
+
+## Get true values
+signal <- Sim_data$signal
+beta_tr <- Sim_data$beta_tr
+sigma2_tr <- Sim_data$sigma2_tr
+
 
 # Run the analysis. Y_test and X_test are included for plotting purposes only
 full_res <- probe( Y = Y, X = X, Y_test = Y_test, 
-X_test = X_test, alpha = alpha, plot_ind = plot_ind, adj = adj)
+X_test = X_test, alpha = 0.05, plot_ind = TRUE, adj = 10)
 
 # Predicting for test data
 pred_res <- predict_probe_func(full_res, X = X_test)
@@ -93,8 +100,9 @@ data(Sim_data_cov)
 
 # Calculating the true signal (the impact of X only)
 eta_i <- apply(t(Sim_data_cov$X)*Sim_data_cov$beta_tr,2,sum) 
-full_res <- probe( Y = Sim_data_cov$Y, X = Sim_data_cov$X, Z = Sim_data_cov$Z, 
-                  alpha = alpha, plot_ind = plot_ind, signal = signal, eta_i  = eta_i)
+full_res <- probe( Y = Sim_data_cov$Y, X = Sim_data_cov$X, 
+                   Z = Sim_data_cov$Z, alpha = 0.05, 
+                   plot_ind = TRUE, signal = Sim_data_cov$signal, eta_i  = eta_i)
                    
 # Final estimates of the impact of X versus the true values:
 data.frame(true_values = Sim_data_cov$beta_Z_tr, full_res$Calb_mod$res_data[-2,])

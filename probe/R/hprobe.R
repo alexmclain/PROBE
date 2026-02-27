@@ -40,8 +40,16 @@
 #' \item Zgodic, A., Bai, R., Zhang, J., Wang, Y., Rorden, C., McLain, AC. (2026). Quantifying predictive uncertainty of aphasia severity in stroke patients with sparse heteroscedastic Bayesian high-dimensional regression. \emph{Computational Statistics} 41:7, 1 -- 23.}
 #' @examples
 #' ### Example
-#' data(h_Sim_data)
-#' attach(h_sim_data)
+#' data(h_sim_data)
+#' 
+#' Y = h_sim_data$Y
+#' X = h_sim_data$X
+#' V = h_sim_data$V
+#' beta_tr = h_sim_data$beta_tr
+#' omega_tr = h_sim_data$omega_tr
+#' Y_test = h_sim_data$Y_test
+#' X_test = h_sim_data$X_test
+#' V_test = h_sim_data$V_test
 #' 
 #' # Run Analysis
 #' res <- hprobe(Y = Y, X = X, V = V)
