@@ -3,8 +3,11 @@ Type: Package
 Title: Sparse High-Dimensional Linear Regression with a PaRtitiOned Empirical Bayes Ecm (PROBE) Algorithm
 Version: 1.3
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 Date: 2026-02-27
 =======
+=======
+>>>>>>> Stashed changes
 Date: 2023-10-01
 >>>>>>> Stashed changes
 Authors@R: c(person("Alexander", "McLain", email = "mclaina@mailbox.sc.edu", role = c("aut", "cre"), comment = c(ORCID = "0000-0002-5475-0670")), person("Anja", "Zgodic", role = c("aut", "ctb")))
