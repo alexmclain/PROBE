@@ -91,7 +91,7 @@ probe_one <- function(Y, X, ep = 0.001, maxit = 10000, Y_test = NULL, X_test = N
   Y_mn <- mean(Y)
   Y <- Y - Y_mn
   if(!is.null(eta_i)){eta_i <- eta_i - Y_mn}
-  if(!is.null(Y_test)){Y_test <- Y_test - mean(Y_test)}
+  if(!is.null(Y_test)){Y_test <- Y_test - Y_mn}   # center by training mean, not test mean
   if(!is.null(X_test)){
     X_test <- t(t(X_test) - X_mean)
   }
@@ -203,19 +203,19 @@ probe_func_one <- function(Y, X, alpha, verbose = TRUE, signal, maxit = 1000,
       
       if (sum(gamma) == 0) {
         if(try2 == 0){
-          cat("Warning loop completely recycled back to beta=0.\n 
+          warning("algorithm recycled back to null gamma values.\n
             Trying again with different starting values. \n")
           rcy_ct <- count
           count <- 0
           beta_t <- rep(1e-5,M)
           beta_var_old <- beta_var_old*0
-          gamma <- rep(1,M)   
+          gamma <- rep(1,M)
           T_vals <- NULL
-          Xt_conv1 <- prev_Xt_conv1 <- 1 
+          Xt_conv1 <- prev_Xt_conv1 <- 1
           try2 <- 1
           tau_s <- 1/sigma2
         } else {
-          cat("Warning loop completely recycled back to beta=0 again.\n")
+          warning("algorithm recycled back to null values twice. Optimization failed.\n")
           break
         }
       }
@@ -349,16 +349,16 @@ probe_func_one <- function(Y, X, alpha, verbose = TRUE, signal, maxit = 1000,
   conv <- 0
   if (conv_check == 0 & try2 < 2) {
     conv <- 1
-    cat("Warning: convergence criteria not met. Set different convergence criteria or 
+    warning("convergence criteria not met. Set different convergence criteria or
         raise maximum number of iterations.\n")
   }
   if (try2 == 2) {
     conv <- 2
-    cat("Warning: loop completely recycled back to beta=gamma=0 twice. Optimization failed.\n")
+    warning("algorithm recycled back to null values twice. Optimization failed.\n")
   }
   if (try2 == 3) {
     conv <- 3
-    cat("Warning: Concentration on 1 variable.\n")
+    warning("Concentration on 1 variable.\n")
   }
   
   M_step <- LR_update
@@ -374,7 +374,7 @@ probe_func_one <- function(Y, X, alpha, verbose = TRUE, signal, maxit = 1000,
   # data is given
   if (plot_ind & !is.null(plot_dat)) {
     if (is.null(report_pred)) {
-      cat("Warning: cannot plot without eta_i or test data.\n")
+      warning("cannot plot without true mean or test data.\n")
     } else {
       plot_probe_func(full_res, test_plot = !is.null(Y_test), alpha = alpha, signal = signal)
     }

@@ -111,14 +111,14 @@ hprobe_func <- function(Y, X, Z = NULL,
     p <- dim(Z)[2]
     beta_Z <- rep(0, p)
   }
-  beta_t <- beta_var <- beta_tilde <- beta_tilde_var <- rep(0,M)
+  beta_t <- beta_var <- rep(0,M)
   gamma <- beta_t + 1
   W_ast <- rep(0, N)
   W_ast_var <- W_ast + 1
-  
-  # remove: sigma2 <- var(Y)
-  sigma2 <- sigma2_O <- var(Y) #new
-  Sigma_y_inv <- solve(diag(1, N)) #new
+
+  sigma2 <- sigma2_O <- var(Y)
+  Sigma_y_inv <- diag(N)
+  omega <- rep(0,ncol(V))
   
   count <- rcy_ct <- conv_check <- try2 <- 0
   plot_dat <- NULL
@@ -186,6 +186,7 @@ hprobe_func <- function(Y, X, Z = NULL,
       mod <- m_step_regression.h(Y, W_ast, W_ast_var + W_ast^2, Z, a = -3/2,
                                  Int = TRUE, V = V,
                                  Sigma_y_inv = Sigma_y_inv,
+                                 omega_pr = omega,
                                  c_param = 1000, sigma2_omega = Inf) #new
       
       Y_pred <- mod$Y_pred
@@ -194,10 +195,8 @@ hprobe_func <- function(Y, X, Z = NULL,
       omega <- mod$omega #new
       sigma2 <- min(c(mod$sigma2_est,sigma2_O)) #new
       
-      Sigma_y <- diag(exp(-1*as.numeric(V%*%omega))) #new
-      Sigma_y_inv <- inv_cpp(Sigma_y)$inverse #new
-      t1 <- try(tmp <- solve(Sigma_y), silent = TRUE) #new
-      if(unique(class(t1) %in% "try-error")){ print("Sigma_y_inv did not work") } #new #not necessary, was a check for me in simuls
+      Sigma_y <- diag(exp(-1*as.numeric(V%*%omega)))
+      Sigma_y_inv <- inv_cpp(Sigma_y)$inverse
       
       if (count > 1) {
         # Check Convergence
@@ -313,10 +312,10 @@ hprobe_func <- function(Y, X, Z = NULL,
   
   M_step <- LR_update
   Seq_test <- NULL
-  if(length(beta_t_new[beta_tilde_var>0]) > 0){
-    Seq_test <- pchisq(sum((beta_t_new[beta_tilde_var>0] - beta_tilde[beta_tilde_var>0])^2 / 
-                             beta_tilde_var[beta_tilde_var>0]),
-                       df=length(beta_t_new[beta_tilde_var>0]),
+  if(length(beta_t_new[beta_var_old>0]) > 0){
+    Seq_test <- pchisq(sum((beta_t_new[beta_var_old>0] - beta_t_old[beta_var_old>0])^2 /
+                             beta_var_old[beta_var_old>0]),
+                       df=length(beta_t_new[beta_var_old>0]),
                        lower.tail = FALSE)
   }
   
@@ -342,7 +341,7 @@ hprobe_func <- function(Y, X, Z = NULL,
 
 m_step_regression.h <- function(Y, W, W2, V, Sigma_y_inv, 
                                 sigma2_omega = Inf, Z = NULL, 
-                                a = -3/2, Int = TRUE, 
+                                a = -3/2, Int = TRUE, omega_pr = NULL,
                                 c_param = 1000) {
   
   N <- length(Y)
@@ -427,14 +426,16 @@ m_step_regression.h <- function(Y, W, W2, V, Sigma_y_inv,
   
   # new: this big chunk of comment
   # optimization for the posterior of omega
-  log.lklh.MLG <- function(par, V, Y, alphaW, Wmat, c_param, sigma2_omega){
-    (-1) * ( sum( 0.5*V%*%par - 0.5*((Y-Wmat%*%alphaW)^2)*exp(V%*%par) ) + ( (c_param*rep(1, ncol(V))*(c_param^(-0.5))*(1/sigma2_omega)) %*% (diag(ncol(V))%*%par) ) -
+  d_V <- diag(ncol(V))
+  log.lklh.MLG <- function(par, V, Y, alphaW, Wmat, c_param, sigma2_omega,d_V){
+    (-1) * ( sum( 0.5*V%*%par - 0.5*((Y-Wmat%*%alphaW)^2)*exp(V%*%par) ) + ( (c_param*rep(1, ncol(V))*(c_param^(-0.5))*(1/sigma2_omega)) %*% (d_V%*%par) ) -
                ( c_param*rep(1, ncol(V)) %*% exp((c_param^(-0.5))*(1/sigma2_omega)*diag(ncol(V))%*%par) ) )
   }
   
-  optim_results <- stats::optim(par = rep(0,ncol(V)) , fn = log.lklh.MLG,
+  if(is.null(omega_pr)) omega_pr <- rep(0,ncol(V))
+  optim_results <- stats::optim(par =  omega_pr, fn = log.lklh.MLG,
                          V = V, Y = Y, alphaW = beta_w,
-                         Wmat = Wmat, c_param = c_param,
+                         Wmat = Wmat, c_param = c_param, d_V = d_V,
                          sigma2_omega = sigma2_omega, method = "BFGS")
   
   omega <- optim_results$par
@@ -500,107 +501,5 @@ m_update_func <- function(X,X_2,beta_tilde, gamma, beta_tilde_var=0){
 }
 
 
-mtr_func <- function(E_step, alpha, signal = NULL) {
-  
-  p_vals <- E_step$p_vals
-  lfdr_val <- E_step$lfdr
-  p_hat <- E_step$pi0
-  M <- length(p_vals)
-  alpha_hat <- alpha/p_hat
-  
-  T_R <- p.adjust(p_vals, method = "BY")
-  R_BH <- p.adjust(p_vals, method = "BH")
-  
-  threshold <- 0
-  lfdr_val[is.na(lfdr_val)] <- 1
-  if (min(lfdr_val) < alpha) {
-    threshold <- max(sort(lfdr_val)[cumsum(sort(lfdr_val)) < alpha])
-  }
-  
-  BH_res <- data.frame(BY = 1 * I(T_R < alpha), BH = 1 * I(R_BH < alpha), 
-                       LFDR = 1 * I(lfdr_val <= threshold))
-  
-  R_BY <- p.adjust(p_vals, method = "bonferroni")
-  R2_BY <- p.adjust(p_vals, method = "holm")
-  
-  Bonf_res <- data.frame(Holm = 1 * I(R2_BY < alpha), Bonf = 1 * I(R_BY < alpha))
-  
-  BH_sum <- apply(BH_res,2,sum)
-  Bonf_sum <- apply(Bonf_res,2,sum)
-  if (!is.null(signal)) {
-    n_signal <- !(1:M %in% signal)
-    BH_sum <- c(sum(BH_res$BH), sum(BH_res$BH[signal]), sum(BH_res$BH[n_signal]))
-    LFDR_res <- c(sum(BH_res$LFDR), sum(BH_res$LFDR[signal]), sum(BH_res$LFDR[n_signal]))
-    BY_res <- c(sum(BH_res$BY), sum(BH_res$BY[signal]), sum(BH_res$BY[n_signal]))
-    BH_sum <- data.frame(BY_sum = BY_res, LFDR_sum = LFDR_res, BH_sum = BH_sum)
-    
-    Bonf_sum <- c(sum(Bonf_res$Bonf), sum(Bonf_res$Bonf[signal]), sum(Bonf_res$Bonf[n_signal]))
-    Holm_res2 <- c(sum(Bonf_res$Holm), sum(Bonf_res$Holm[signal]), 
-                   sum(Bonf_res$Holm[n_signal]))
-    
-    Bonf_sum <- data.frame(Holm_sum = Holm_res2, Bonf_sum = Bonf_sum)
-    row.names(BH_sum) <- c("Total", "Correct", "Errors")
-    row.names(Bonf_sum) <- c("Total", "Correct", "Errors")
-  }
-  
-  
-  return(list(BH_res = BH_res, Bonf_res = Bonf_res, Bonf_sum = Bonf_sum, 
-              BH_sum = BH_sum))
-}
-
-
-plot_probe_func <- function(full_res, test_plot, alpha, signal) {
-  
-  plot_dat <- full_res$plot_dat
-  
-  a <- quantile(plot_dat$Pred_err, probs = 0.9)
-  b <- min(plot_dat$Pred_err)
-  L_pred <- plot_dat$Pred_err[length(plot_dat$Pred_err)]
-  a <- max(c(a, b + (L_pred-b)*5/3 ))
-  
-  ylab_val <- expression(paste("Signal  ", MSE[t]))
-  if (test_plot) {
-    ylab_val <- expression(paste("Test  ", MSPE[t]))
-  }
-  
-  plot(plot_dat$Iter, plot_dat$Pred_err, type = "l", ylim = c(b, a), 
-       xlim = range(plot_dat$Iter), xlab = "Iteration", ylab = ylab_val, 
-       lwd = 2, cex.lab = 1.4, cex.axis = 1.2, las = 1)
-  
-  p_vec <- plot_dat$Total_Disc
-  b9 <- min(p_vec)
-  a9 <- quantile(p_vec, probs = 0.9)
-  
-  axis(4, las = 1, at = seq(b, a, length.out = 4), 
-       labels = round(seq(b9, a9, length.out = 4), 0), cex.axis = 1.2, las = 2)
-  mtext("Number of rejections", side = 4, line = 2.9, cex = 1.2)
-  trans_crit <- (p_vec - b9)/quantile(p_vec - b9, probs = 0.9) * (a - 
-                                                                    b) + b
-  
-  if (test_plot) { 
-    points(plot_dat$Iter, trans_crit, col = 1, pch = 19, cex = 0.5)
-    legend("topright", legend = c("Rejections with lfdr",
-                                  "Test MSPE"), lwd = 2, lty = c(0,1),
-           pch = c(19,-1), pt.lwd = c(2,0), cex = 1.3)
-  }else{ 
-    if(!is.null(signal)){
-      denom <- plot_dat$Total_Disc
-      denom[denom == 0] <- 1
-      col_vec <- ifelse(plot_dat$FP/denom < alpha, "grey60", 1)
-      points(plot_dat$Iter, trans_crit, col = col_vec, pch = 19, cex = 0.5)
-      legend("topright", legend = c(expression(FDR>alpha), expression(FDR<= alpha),
-                                    "MSE of signal"),
-             lwd = c(0,0,2), lty = c(3,3,1), col = c(1,"grey60",1),
-             pch = c(20,20,-1), pt.lwd = c(2,2,0), cex = 1.3)
-    }else{
-      points(plot_dat$Iter, trans_crit, col = 1, pch = 19, cex = 0.5)
-      legend("topright", legend = c("Rejections with lfdr",
-                                    "MSE of signal"),
-             lwd = c(2), lty = c(0,1), col = 1,
-             pch = c(19,-1), pt.lwd = c(2,0), cex = 1.3)
-    }
-  }
-  
-}
-
+# mtr_func and plot_probe_func are defined in probe_wrapper.R and shared here.
 

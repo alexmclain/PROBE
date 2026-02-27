@@ -40,15 +40,21 @@
 #' ### Example
 #' data(Sim_data)
 #' data(Sim_data_test)
-#' attach(Sim_data)
-#' attach(Sim_data_test)
-#' alpha <- 0.05
-#' plot_ind <- TRUE
-#' adj <- 10
+#' 
+#' ## Get training and test data
+#' Y <- Sim_data$Y
+#' X <- Sim_data$X
+#' Y_test <- Sim_data_test$Y_test
+#' X_test <- Sim_data_test$X_test
+#' 
+#' ## Get true values
+#' signal <- Sim_data$signal
+#' sigma2_tr <- Sim_data$sigma2_tr
+#' 
 #' 
 #' # Run the analysis. Y_test and X_test are included for plotting purposes only
 #' full_res <- probe( Y = Y, X = X, Y_test = Y_test, 
-#' X_test = X_test, alpha = alpha, plot_ind = plot_ind, adj = adj)
+#' X_test = X_test, alpha = 0.05, plot_ind = TRUE, adj = 10)
 #' 
 #' # Predicting for test data
 #' pred_res <- predict_probe_func(full_res, X = X_test)
@@ -73,8 +79,9 @@
 #' # Calculating the true signal (the impact of X only)
 #' eta_i <- apply(t(Sim_data_cov$X)*Sim_data_cov$beta_tr,2,sum) 
 #  # Run the analysis. eta_i (true signal) and signal are included for plotting purposes only.
-#' full_res <- probe( Y = Sim_data_cov$Y, X = Sim_data_cov$X, Z = Sim_data_cov$Z, 
-#'                   alpha = alpha, plot_ind = plot_ind, signal = signal, eta_i  = eta_i)
+#' full_res <- probe( Y = Sim_data_cov$Y, X = Sim_data_cov$X, 
+#'                    Z = Sim_data_cov$Z, alpha = 0.05, 
+#'                    plot_ind = TRUE, signal = Sim_data_cov$signal, eta_i  = eta_i)
 #'                    
 #' # Final estimates of the impact of X versus the true values:
 #' data.frame(true_values = Sim_data_cov$beta_Z_tr, full_res$Calb_mod$res_data[-2,])
@@ -114,7 +121,7 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
     p <- dim(Z)[2]
     beta_Z <- rep(0, p)
   }
-  beta_t <- beta_var <- beta_tilde <- beta_tilde_var <- rep(0,M)
+  beta_t <- beta_var <- rep(0,M)
   gamma <- beta_t + 1
   W_ast <- rep(0, N)
   W_ast_var <- W_ast + 1
@@ -230,12 +237,12 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
             if (report_pred > 1) {
               report_pred <- round(report_pred, 1)
             }      
-            message("Iteration=", count, "Number of discoveries (using lfdr)=", 
-                    disc, "Sum(gamma)=", round(sum(E_step$gamma), 1), " MSPE(test)=", 
-                    report_pred, "Convergence Crit=", CC_round, "\n")
+            message("Iteration=", count, " Number of discoveries (using lfdr)=", 
+                    disc, " Sum(gamma)=", round(sum(E_step$gamma), 1), " MSPE(test)=", 
+                    report_pred, " Convergence Crit=", CC_round, "\n")
           } else {
-            message("Iteration=", count, "Number of discoveries (using lfdr)=", 
-                    disc, "Sum(gamma)=", round(sum(E_step$gamma), 1), "Convergence Crit=", 
+            message("Iteration=", count, " Number of discoveries (using lfdr)=", 
+                    disc, " Sum(gamma)=", round(sum(E_step$gamma), 1), " Convergence Crit=", 
                     CC_round, "\n")
           }
         } else {
@@ -297,18 +304,11 @@ probe_func <- function(Y, X, Z = NULL, alpha, verbose = TRUE, signal, maxit = 10
   }
   
   
-  M_step <- LR_update
-  Seq_test <- NULL
-  if(length(beta_t_new[beta_tilde_var>0]) > 0){
-    Seq_test <- pchisq(sum((beta_t_new[beta_tilde_var>0] - beta_tilde[beta_tilde_var>0])^2 / 
-                             beta_tilde_var[beta_tilde_var>0]),
-                       df=length(beta_t_new[beta_tilde_var>0]),
-                       lower.tail = FALSE)
-  }
-  
-  full_res <- list(beta_ast_hat = beta_ast_hat, beta_hat = beta_hat, beta_hat_var = beta_hat_var, 
-                   gamma_hat = gamma, E_step = E_step, Calb_mod = mod, count = count, plot_dat = plot_dat, 
-                   Seq_test = Seq_test, M_step = M_step, sigma2_est = mod$sigma2_est, conv = conv, 
+  full_res <- list(beta_ast_hat = beta_ast_hat, beta_hat = beta_hat, 
+                   beta_hat_var = beta_hat_var, 
+                   gamma_hat = gamma, E_step = E_step, 
+                   Calb_mod = mod, count = count, plot_dat = plot_dat, 
+                   M_step = LR_update, sigma2_est = mod$sigma2_est, conv = conv, 
                    W_ast = W_ast, W_ast_var = W_ast_var, Y = Y, X = X, Z = Z)
   
   # Plotting iteration results if plot_ind=TRUE and either eta_i or test
