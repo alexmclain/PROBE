@@ -5,7 +5,7 @@ This repository contains the R software tools to run the PaRtitiOned
 empirical Bayes Ecm (PROBE) and Heteroscedastic PROBE (H-PROBE)
 algorithms. We give a brief explanation of the PROBE algorithm below.
 For more details see McLain, Zgodic, and Bondell (2025) and Zgodic et
-al. (2023). The folders `Drug Response Example` and
+al. (2026). The folders `Drug Response Example` and
 `Simulation functions` contain reproducible examples for the PROBE
 algorithm only. Similar folders for H-PROBE are under development.
 
@@ -70,9 +70,18 @@ Load the package and the data.
 ``` r
 library(probe)
 data(Sim_data)
-attach(Sim_data) 
+
+Y <- Sim_data$Y
+X <- Sim_data$X
+signal <- Sim_data$signal
+beta_tr <- Sim_data$beta_tr
+sigma2_tr <- Sim_data$sigma2_tr
 M <- dim(X)[2] 
 M1 <- length(signal) 
+alpha <- 0.05
+
+# Calculating the true signal
+eta_i <- X%*%beta_tr
 ```
 
 Here, **Sim_data** contains the following elements:
@@ -93,7 +102,6 @@ the number of rejections with an indication of whether FDR$\leq \alpha$
 by iteration ($t$).
 
 ``` r
-eta_i <- apply(t(X)*beta_tr,2,sum) 
 full_res <- probe( Y = Y, X = X, plot_ind = TRUE, 
                    eta_i = eta_i, signal = signal)
 ```
@@ -133,7 +141,8 @@ Load in some test data.
 
 ``` r
 data(Sim_data_test)
-attach(Sim_data_test) 
+Y_test <- Sim_data_test$Y_test
+X_test <- Sim_data_test$X_test
 dim(X_test)
 length(Y_test)
 ```
@@ -160,7 +169,7 @@ pred_res_test <- predict_probe_func(full_res, X = X_test,
                                        alpha = alpha)
 
 ## The true signal for test data
-eta_test <- apply(t(X_test)*beta_tr,2,sum) 
+eta_test <- X_test%*%beta_tr
 plot(pred_res_test$Pred, eta_test)
 ```
 
@@ -190,10 +199,9 @@ Load in the data:
 
 ``` r
 data(Sim_data_cov)
-attach(Sim_data_cov) 
 M <- dim(X)[2] 
 M1 <- length(signal) 
-eta_i <- apply(t(X)*beta_tr,2,sum) 
+eta_i <- X%*%Sim_data_cov$beta_tr
 ```
 
 Here, **Sim_data** contains the following elements:
@@ -213,8 +221,9 @@ In this analysis we include $\eta_i$ and **signal** for plotting
 purposes.
 
 ``` r
-full_res <- probe(Y = Y, X = X, Z = Z, plot_ind = TRUE, 
-                  eta_i = eta_i, signal = signal)
+full_res <- probe(Y = Sim_data_cov$Y, X = Sim_data_cov$X, 
+                  Z = Sim_data_cov$Z, alpha = 0.05, 
+                  plot_ind = TRUE, signal = Sim_data_cov$signal, eta_i  = eta_i)
 ```
 
 Total number of iterations
@@ -226,7 +235,7 @@ full_res$count
 Final estimates of the impact of Z versus the true values:
 
 ``` r
-data.frame(true_values = beta_Z_tr, full_res$Calb_mod$res_data[-2,])
+data.frame(true_values = Sim_data_cov$beta_Z_tr, full_res$Calb_mod$res_data[-2,])
 ```
 
 Compare to a standard linear model of $Z$ on $Y$:
@@ -251,8 +260,7 @@ Load the package and the data.
 
 ``` r
 library(probe)
-data(h_Sim_data)
-attach(h_sim_data) 
+data(h_sim_data)
 ```
 
 Here, **h_sim_data** contains the following elements:
@@ -262,43 +270,42 @@ Here, **h_sim_data** contains the following elements:
   training set,
 - **V**: $n \times 7$ design matrix for modeling the variance of the
   training set,
-- **beta_tr**: true value of $\beta$ coefficients,
-- **omega_tr**: true value of $\omega$ coefficients, and
-- **signal**: indicies of the $M_1$ non-null predictors
+- **beta_tr**: true value of $\beta$ coefficients, and
+- **omega_tr**: true value of $\omega$ coefficients. 
 
 where $n=200$, $M=400$ and $M_1=20$ if the data on GitHub are used.
 
 Running the Analysis
 
 ``` r
-res <- hprobe(Y = Y, X = X, V = V)
+res <- hprobe(Y = h_sim_data$Y, X = h_sim_data$X, V = h_sim_data$V)
 ```
 
 An example of estimating predicted values and prediction intervals for
 the test data.
 
 ``` r
-pred_res <- predict_hprobe_func(res, X_test, V = V_test)
-sqrt(mean((Y_test - pred_res$Pred)^2))
-plot(Y_test, pred_res$Pred, ylab = "Prediction", xlab = "Test Outcome")
+pred_res <- predict_hprobe_func(res, h_sim_data$X_test, V = h_sim_data$V_test)
+sqrt(mean((h_sim_data$Y_test - pred_res$Pred)^2))
+plot(h_sim_data$Y_test, pred_res$Pred, ylab = "Prediction", xlab = "Test Outcome")
 abline(coef = c(0,1))
 # Proportion of explained variance
-1 - var(Y_test - pred_res$Pred)/var(Y_test)
+1 - var(h_sim_data$Y_test - pred_res$Pred)/var(h_sim_data$Y_test)
 
 # Predicted values and prediction intervals for the first 5 subjects (with the true outcome)
-head(cbind(Y_test, pred_res))
+head(cbind(h_sim_data$Y_test, pred_res))
 ```
 
 True and estimated values of the $\omega$ coefficients.
 
 ``` r
-cbind(omega_tr, res$omega)
+cbind(h_sim_data$omega_tr, res$omega)
 ```
 
 True versus estimated $\beta$ coeffiecients.
 
 ``` r
-plot(beta_tr, 
+plot(h_sim_data$beta_tr, 
      res$beta_ast_hat, 
      xlab = "True Beta", 
      ylab = "Estimated Beta")
@@ -308,7 +315,7 @@ abline(coef = c(0,1))
 Confusion matrix of true versus estimated signals using 0.5 cutoff.
 
 ``` r
-table(beta_tr==0, res$gamma_hat<0.5)
+table(h_sim_data$beta_tr==0, res$gamma_hat<0.5)
 ```
 
 # References
@@ -440,12 +447,12 @@ Assoc.* 102 (479): 901–12. <https://doi.org/10.1198/016214507000000545>.
 
 </div>
 
-<div id="ref-Zgoetal23" class="csl-entry">
+<div id="ref-Zgoetal26" class="csl-entry">
 
 Zgodic, Anja, Ray Bai, Jiajia Zhang, Yuan Wang, Chris Rorden, and
-Alexander McLain. 2023. “Heteroscedastic Sparse High-Dimensional Linear
+Alexander McLain. 2026. “Heteroscedastic Sparse High-Dimensional Linear
 Regression with a Partitioned Empirical Bayes ECM Algorithm.”
-<https://arxiv.org/abs/2309.08783>.
+*Computational Statistics* 41:7, 1 -- 23.
 
 </div>
 

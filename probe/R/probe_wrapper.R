@@ -16,7 +16,7 @@
 #' @param eta_i (optional) A vector of the true signal. This is used to calculate the MSE by iteration for simulated data. Used plotting purposes only (doesn't impact results).
 #' @param alpha (optional) significance level
 #' @param plot_ind A logical values (True/False) for whether to output plots on algorithm results and progress (default = FALSE)
-#' @param adj Bandwidth parameter for empirical Bayes E-step. The bandwidth will be equal to \code{adj} times Silverman's 'rule of thumb' (default = 2).
+#' @param adj Bandwidth parameter for empirical Bayes E-step. The bandwidth will be equal to \code{adj} times Silverman's 'rule of thumb' (default = 5).
 #' @return A list including 
 #' 
 #' \code{beta_ast_hat} MAP estimates of the regression coefficients (\eqn{\beta^\ast}),
@@ -49,6 +49,7 @@
 #' 
 #' ## Get true values
 #' signal <- Sim_data$signal
+#' beta_tr <- Sim_data$beta_tr
 #' sigma2_tr <- Sim_data$sigma2_tr
 #' 
 #' 
