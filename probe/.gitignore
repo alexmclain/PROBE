@@ -34,3 +34,8 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
+
+# Compiled C++ artifacts — never commit these, they are architecture-specific
+src/*.o
+src/*.so
+src/*.dll

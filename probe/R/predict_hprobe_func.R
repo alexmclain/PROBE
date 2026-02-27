@@ -31,11 +31,11 @@ predict_hprobe_func <- function(res, X, V, Z = NULL,
   coef_est <- mod$coef
   VCV <- mod$VCV
   
-  if(is.null(V)){ #new
-    Sigma_i <- (diag(res$Sigma_y_inv))^(-1)
+  if(is.null(V)){
+    Sigma_i <- diag(res$Sigma_y)   # Sigma_y is diagonal; diag() extracts its entries
   } else{
     Sigma_i <- exp(-1*as.numeric(V%*%res$Calb_mod$omega))
-  }  #new
+  }
   
   if (!is.matrix(X)){
     if(!is.null(dim(X))[1]){

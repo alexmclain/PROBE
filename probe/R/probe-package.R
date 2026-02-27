@@ -7,8 +7,8 @@
 #' @import Rcpp
 #' @import RcppArmadillo
 #' @importFrom glmnet cv.glmnet
-#' @importFrom graphics axis legend points mtext par
-#' @importFrom stats coef density  dt influence lm p.adjust pchisq predict pt qnorm quantile smooth.spline var vcov
+#' @importFrom graphics axis legend points mtext
+#' @importFrom stats coef density dt influence lm optim p.adjust pchisq predict pt qnorm quantile smooth.spline var vcov
 #' @aliases probe-package
 #' @useDynLib probe, .registration = TRUE
 "_PACKAGE"
