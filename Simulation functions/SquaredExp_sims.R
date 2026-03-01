@@ -45,10 +45,6 @@ library(probe)
 library(glmnet)
 library(sparsevb)
 library(varbvs)
-library(EMVS) 
-### EMVS was removed from CRAN on Dec-2022 
-### available at https://ftp.eenet.ee/pub/cran/web/packages/EMVS/index.html 
-library(SSLASSO)
 library(ebreg)
 library(R.utils)
 library(ncvreg)

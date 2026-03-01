@@ -12,8 +12,10 @@
 #' 
 #' \code{pi0} estimated proportion of null hypothesis
 #' @references 
-#' Storey, J. D., Taylor, J. E., and Siegmund, D. (2004), “Strong control, conservative point estimation and simultaneous conservative consistency of false discovery rates: A unified approach,” J. R. Stat. Soc. Ser. B. Stat. Methodol., 66, 187–205.
-#' McLain, A. C., Zgodic, A., & Bondell, H. (2022). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. arXiv preprint arXiv:2209.08139.
+#' \itemize{  \item McLain, AC, A Zgodic, H Bondell (2025). Sparse high-dimensional linear regression with a partitioned empirical Bayes ECM algorithm. \emph{Computational Statistics and Data Analysis} 207, 108146.
+#' \item Zgodic, A., Bai, R., Zhang, J., Wang, Y., Rorden, C., & McLain, AC. (2026). Quantifying predictive uncertainty of aphasia severity in stroke patients with sparse heteroscedastic Bayesian high-dimensional regression. \emph{Computational Statistics} 41:7, 1 -- 23.
+#' \item Storey, J. D., Taylor, J. E., and Siegmund, D. (2004), “Strong control, conservative point estimation and simultaneous conservative consistency of false discovery rates: A unified approach,” \emph{J. R. Stat. Soc. Ser. B. Stat. Methodol.}, 66, 187–205.
+#' }
 #' @examples
 #' #not run
 #' #mod <- e_step_func(beta_t, beta_var, df, adj = 5, lambda = 0.1, monotone = TRUE)

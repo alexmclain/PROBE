@@ -1424,7 +1424,7 @@ block.data.gen2 <- function(
 
 squared.exp.psl <- function(parlist, B, verbose = FALSE, seed = 1641){
   
-
+  
   alpha <- 0.05
   K <- B
   N <- 400
@@ -1447,7 +1447,7 @@ squared.exp.psl <- function(parlist, B, verbose = FALSE, seed = 1641){
   colnames(PROBE_res) <- c("M", "M1", "eta", "sigma", "sig_nois", "MSE", "MAD", "ECP_PI", 
                            "ECP_CI", "Iter", "Sigma2_est", "Test_MSPE", "Test_MSE", "Beta_mse", 
                            "Conv", "time","alpha")
-  sparsevb_res <- matrix(-999,K,8)
+  sparsevb_res <- varbvs_res <- matrix(-999,K,8)
   LASSO_res <- matrix(-999,K,8)
   
   
@@ -1462,7 +1462,7 @@ squared.exp.psl <- function(parlist, B, verbose = FALSE, seed = 1641){
                            "lasso_MSE", "lasso_MAD", 
                            "lasso_Obs_test_MSPE", "lasso_test_MSE", "lasso_Beta_mse", "lasso_time")
   
-   ## Set convergence criteria
+  ## Set convergence criteria
   maxit <- 100
   ep <- 0.1
   
@@ -1592,13 +1592,13 @@ squared.exp.psl <- function(parlist, B, verbose = FALSE, seed = 1641){
     }
     
     
-      k_res <- data.frame(rbind(round(PROBE_res[k,-c(3:5,5:8+3,12+3)],3),
-                                round(c(LASSO_res[k,],NA),3),
-                                round(c(sparsevb_res[k,],NA),3)
-                                ))
-      colnames(k_res)[c(1:2,8)] <- c("Sum_gamma", "Sum_correct_gamma", "Time(sec)")
-      rownames(k_res) <- c("PROBE","LASSO","SPARSEVB")
-      
+    k_res <- data.frame(rbind(round(PROBE_res[k,-c(3:5,5:8+3,12+3)],3),
+                              round(c(LASSO_res[k,],NA),3),
+                              round(c(sparsevb_res[k,],NA),3)
+    ))
+    colnames(k_res)[c(1:2,8)] <- c("Sum_gamma", "Sum_correct_gamma", "Time(sec)")
+    rownames(k_res) <- c("PROBE","LASSO","SPARSEVB")
+    
     
     cat("Iteration",k,"finished.\n")
     
@@ -1629,8 +1629,8 @@ squared.exp.psl <- function(parlist, B, verbose = FALSE, seed = 1641){
   avg_sig_probe <- apply(full_res[,grepl('Sigma2_est', colnames(full_res))],2,mean)
   mse_mat <- matrix(avg_mse,nrow = length(avg_mse)/2, ncol = 2, byrow = TRUE)
   colnames(mse_mat) <- c("Train_MSE", "Test_MSE")
-
-    rownames(mse_mat) <- c("PROBE","LASSO","SPARSEVB")
+  
+  rownames(mse_mat) <- c("PROBE","LASSO","SPARSEVB")
   sig_dig <- ceiling(c(-log10(min(mse_mat)), -log10(min(avg_mspe)), -log(min(med_mad)), 
                        -log10(min(avg_b_err)), -log10(min(avg_time)) ))+1
   sig_dig[1:2] <- sig_dig[1:2] +1
@@ -1672,7 +1672,20 @@ squared.exp <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641){
     RF <- TRUE
     library(RandomFields)
   }else{
-    cat("Warning: geoR will be used to generate data. This is time consuming, particularly for large M. \n")
+    range = 6; 
+    nu = 1.5; 
+    sigma2 = 1.0;
+    nugget = 1e-6;
+    coord_mat <- expand.grid(x = x, y = x)
+    n <- nrow * ncol
+    D <- fields::rdist(coord_mat) 
+    # covariance for signal-field (G_signal)
+    Csig <- matern_cov(D, range = range_signal, nu = nu_signal, sigma2 = sigma2_signal, nugget = nugget)
+    diag(Csig) <- diag(Csig) + nugget
+    R_signal <- chol(Csig)
+    Ctheta <- matern_cov(D, range = range_theta, nu = nu_theta, sigma2 = sigma2_theta, nugget = nugget)
+    diag(Ctheta) <- diag(Ctheta) + nugget
+    R_theta <- chol(Ctheta)
   }
   
   ## Initializing data outputs
@@ -1745,7 +1758,7 @@ squared.exp <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641){
       data <- sim_bin_LR_RF(x, N, M, M1, sig_sp, lat_sp,  
                             seed = seed + k)
     }else{
-      data <- sim_bin_LR_geo(x,N,M,M1,sig_sp,lat_sp,seed = seed + k)
+      data <- sim_LR_mat(x, N, M, M1, R, seed = seed + k)
     }
     
     #Signal and beta coefficients
@@ -2101,6 +2114,105 @@ squared.exp <- function(args_list, B, ebreg_I, verbose = FALSE, seed = 1641){
 }
 
 
+# Dependencies: MASS, fields, (optional) fields::image.plot for plotting
+library(MASS)
+library(fields)
+
+# ------------- helper: Matérn covariance function --------------
+# nu: smoothness, range: practical range parameter (phi), sigma2: marginal variance
+# Using the standard Matérn: cov(h) = sigma2 * (2^{1-nu}/Gamma(nu)) * (sqrt(2*nu) h / range)^nu * K_nu(...)
+# We will use fields::Matern if available, otherwise provide a fallback to the exponential/Gaussian approx.
+matern_cov <- function(d, range = 10, nu = 1, sigma2 = 1, nugget = 1e-6) {
+  # d: matrix or vector of pairwise distances
+  # fields::Matern expects 'range' to be scale parameter (phi). We'll use fields::Matern when available.
+  if (requireNamespace("fields", quietly = TRUE)) {
+    # fields::Matern uses "range" scale; multiply by sigma2
+    cov <- sigma2 * fields::Matern(d, range = range, smoothness = nu)
+  } else {
+    # fallback: use exponential when fields not available
+    cov <- sigma2 * exp(-d / range)
+    warning("fields package not available; using exponential fallback for covariance.")
+  }
+  # add nugget on diagonal if d is a matrix (we'll add later by caller to diagonal)
+  return(cov + diag(nugget, nrow(as.matrix(d))))
+}
+
+  
+  # ------------- function to simulate fields and Z --------------
+  simulate_matern_threshold <- function(N, nrow = D, ncol = D,
+                                        R = NULL,  # R is upper triangular so t(R) %*% R = Cov
+                                        coords = NULL, #coordinate matrix
+                                        range = 8, nu = 1.0, sigma2 = 1.0,
+                                        nugget = 1e-6,
+                                        verbose = TRUE) {
+    # grid coordinates
+    n <- nrow * ncol
+    if (verbose) cat(sprintf("Grid: %d x %d -> %d locations with %d sample size\n", nrow, ncol, n))
+    
+    if(is.null(R)){
+      if(any(is.null(c(coords, range, nu, sigma2, nugget)))){stop("R or Matern parameters must be given.")}
+      # compute pairwise distances
+      if (verbose) cat("Computing pairwise distance matrix...\n")
+      if (requireNamespace("fields", quietly = TRUE)) {
+        D_full <- fields::rdist(coords)   # efficient distance computation
+      } else {
+        # fallback
+        coords_mat <- as.matrix(coords)
+        D_full <- as.matrix(dist(coords_mat))
+      }
+      
+      # covariance for signal-field (G_signal)
+      if (verbose) cat("Building Matérn covariance...\n")
+      Csig <- matern_cov(D_full, range = range, nu = nu, sigma2 = sigma2, nugget = nugget)
+      diag(Csig) <- diag(Csig) + nugget
+      R <- chol(Csig)
+    }
+    # draw G_signal ~ MVN(0, Csig)
+    if (verbose) cat("Sampling G_signal (MVN) ...\n")
+    Z_vec <- matrix(rnorm(n = n*N), nrow = n, ncol = N)
+    G     <- t(R) %*% Z_vec
+
+    return(list(G = G,
+                coords = coords,
+                G_vec = G_vec, 
+                params = list(nrow = nrow, ncol = ncol,
+                              range  = range, nu  = nu, sigma2  = sigma2)))
+  }
+  
+
+sim_LR_mat <- function(x, N, M, M1, R, seed=NULL){
+  
+  if(is.null(seed)){seed = 238476}
+  set.seed(seed)
+  LP_data <- expand.grid(x1=x,
+                         x2=x)
+  D <- as.integer(sqrt(M))
+  t_data <- simulate_matern_threshold(2*N + 1, nrow = D, ncol = D,
+                                        R = R)
+  signal_data <- t_data[,1]
+  test_data <- t_data[,(N+2):ncol(t_data)]
+  t_data <- t_data[,2:(N+1)]
+
+  quan <- quantile(array(signal_data),prob = 1-M1/M)
+  signal_data <- 1*I(array(signal_data)>=quan)
+  LP_data$signal     <- as.integer(signal_data)+1
+  
+  X_cont <- t_data
+  X <- 1*I(X_cont < 0)
+  
+  signal<- seq(1,M,1)[LP_data$signal==2]
+  sig_ind <- rep(0,M)
+  sig_ind[signal] <- 1
+  
+  
+  return(list(LP_data = LP_data, X = X, 
+              X_cont = X_cont, 
+              test_data = test_data,
+              signal = signal, 
+              sig_ind = sig_ind))
+}
+
+
 sim_bin_LR_geo <- function(x, N, M, M1, sig_sp, lat_sp, 
                            seed=NULL){
   
@@ -2156,135 +2268,135 @@ sim_bin_LR_geo <- function(x, N, M, M1, sig_sp, lat_sp,
               sig_ind = sig_ind))
 }
 
-
-sim_bin_LR_RF <- function(x, N, M, M1, sig_sp, lat_sp,
-                          seed=NULL){
-  
-  if(!is.null(seed)){set.seed(seed)}
-  x1 <- x2 <- 1:as.integer(sqrt(M))
-  signal_data <- RFsimulate(model = RMstable(alpha = 2, scale = sig_sp),x=x1,y=x2,grid=TRUE,n=1)
-  quan <- quantile(array(signal_data),prob = 1-M1/M)
-  signal_data <- 1*I(array(signal_data)>=quan)
-  
-  LP_data <- expand.grid(x1=x1,x2=x2)
-  LP_data$signal     <- as.integer(signal_data)+1
-  RE_eff <- rnorm(N)
-  
-  # t_eta <- RFsimulate(model = RMstable(alpha = 2, scale = sig_sp, var = eta_var), x=x, y=x,grid=TRUE,n=1)
-  t_data <- RFsimulate(model = RMstable(alpha = 2, scale = lat_sp,var = 1), x=x, y=x,grid=TRUE,n=N)
-  
-  Z_cont <- matrix(array(t_data),M,N)
-  Z <- 1*I(Z_cont < 0)
-  
-  t_data <- RFsimulate(model = RMstable(alpha = 2, scale = lat_sp,var = 1), x=x, y=x,grid=TRUE,n=N)
-  test_data = matrix(array(t_data),M,N)
-  
-  signal<- seq(1,M,1)[LP_data$signal==2]
-  sig_ind <- rep(0,M)
-  sig_ind[signal] <- 1
-  
-  
-  return(list(LP_data=LP_data, 
-              X=Z, 
-              X_cont = Z_cont, 
-              test_data = test_data,
-              signal=signal,
-              sig_ind=sig_ind))
-}
-
-
-lasso <- function(Y,X){
-  cv.out <- cv.glmnet(X,Y,alpha = 1,nfolds = 10,lambda.min.ratio=0.001)
-  # while(cv.out$lambda.min==min(cv.out$lambda)){
-  #   ### Further decreasing the lambda if the smallest lambda was the best.
-  #   cv.out <- cv.glmnet(X,Y,alpha = 1,nfolds = 10,lambda=exp(c(log(cv.out$lambda.1se),seq(log(min(cv.out$lambda)),log(min(cv.out$lambda)*0.001),length.out = 100))))
-  # }
-  cv.out
-}
-
-adap_lasso <- function(Y,X){
-  ridge1_cv <- cv.glmnet(X, Y, alpha = 0, nfolds = 10)
-  best_ridge_coef <- as.numeric(coef(ridge1_cv, s = ridge1_cv$lambda.min))[-1]
-  cv.out <- cv.glmnet(X, Y, alpha = 1, nfolds = 10, lambda.min.ratio = 0.001,
-                      penalty.factor = 1 / abs(best_ridge_coef))
-  
-  # while(cv.out$lambda.min==min(cv.out$lambda)){
-  #   ### Further decreasing the lambda if the smallest lambda was the best.
-  #   cv.out <- cv.glmnet(X, Y, alpha = 1, nfolds = 10,
-  #                       penalty.factor = 1 / abs(best_ridge_coef),
-  #                       lambda=exp(c(log(cv.out$lambda.1se), 
-  #                                    seq(log(min(cv.out$lambda)),
-  #                                        log(min(cv.out$lambda)*0.001),
-  #                                        length.out = 100))) )
-  # }
-  list(cv.out = cv.out, 
-       best_ridge_coef = best_ridge_coef)
-}
-
-scad_func <- function(Y,X,N,M){
-  cv.out2 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "SCAD",lambda.min=0.01, max.iter = 50000)
-  # while(cv.out2$lambda.min==min(cv.out2$lambda)){
-  #   ### Further decreasing the lambda if the smallest lambda was the best.
-  #   cv.out2 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "SCAD",lambda=exp(seq(log(min(cv.out2$lambda)),log(min(cv.out2$lambda)/100),length.out = 20)), max.iter = 50000)
-  # }
-  cv.out2
-}
-
-MCP_func <- function(Y,X,N,M){
-  cv.out3 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "MCP",lambda.min=0.01, max.iter = 50000)
-  # while(cv.out3$lambda.min==min(cv.out3$lambda)){
-  #   ### Further decreasing the lambda if the smallest lambda was the best.
-  #   cv.out3 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "MCP",lambda=exp(seq(log(min(cv.out3$lambda)),log(min(cv.out3$lambda)/100),length.out = 20)), max.iter = 50000)
-  # }
-  cv.out3
-}
-
-
-MTR <- function(E_step, alpha, signal = NULL) {
-  
-  p_vals <- E_step$p_vals
-  lfdr_val <- E_step$lfdr
-  p_hat <- E_step$pi0
-  M <- length(p_vals)
-  alpha_hat <- alpha/p_hat
-  
-  T_R <- p.adjust(p_vals, method = "BY")
-  R_BH <- p.adjust(p_vals, method = "BH")
-  
-  threshold <- 0
-  lfdr_val[is.na(lfdr_val)] <- 1
-  if (min(lfdr_val) < alpha) {
-    threshold <- max(sort(lfdr_val)[cumsum(sort(lfdr_val)) < alpha*(1:M)])
-  }
-  
-  BH_res <- data.frame(BY = 1 * I(T_R < alpha), BH = 1 * I(R_BH < alpha), 
-                       LFDR = 1 * I(lfdr_val <= threshold))
-  
-  R_BY <- p.adjust(p_vals, method = "bonferroni")
-  R2_BY <- p.adjust(p_vals, method = "holm")
-  
-  Bonf_res <- data.frame(Holm = 1 * I(R2_BY < alpha), Bonf = 1 * I(R_BY < alpha))
-  
-  BH_sum <- apply(BH_res,2,sum)
-  Bonf_sum <- apply(Bonf_res,2,sum)
-  if (!is.null(signal)) {
-    n_signal <- !(1:M %in% signal)
-    BH_sum <- c(sum(BH_res$BH), sum(BH_res$BH[signal]), sum(BH_res$BH[n_signal]))
-    LFDR_res <- c(sum(BH_res$LFDR), sum(BH_res$LFDR[signal]), sum(BH_res$LFDR[n_signal]))
-    BY_res <- c(sum(BH_res$BY), sum(BH_res$BY[signal]), sum(BH_res$BY[n_signal]))
-    BH_sum <- data.frame(BY_sum = BY_res, LFDR_sum = LFDR_res, BH_sum = BH_sum)
+  sim_bin_LR_RF <- function(x, N, M, M1, sig_sp, lat_sp,
+                            seed=NULL){
     
-    Bonf_sum <- c(sum(Bonf_res$Bonf), sum(Bonf_res$Bonf[signal]), sum(Bonf_res$Bonf[n_signal]))
-    Holm_res2 <- c(sum(Bonf_res$Holm), sum(Bonf_res$Holm[signal]), 
-                   sum(Bonf_res$Holm[n_signal]))
+    if(!is.null(seed)){set.seed(seed)}
+    x1 <- x2 <- 1:as.integer(sqrt(M))
+    signal_data <- RFsimulate(model = RMstable(alpha = 2, scale = sig_sp),x=x1,y=x2,grid=TRUE,n=1)
+    quan <- quantile(array(signal_data),prob = 1-M1/M)
+    signal_data <- 1*I(array(signal_data)>=quan)
     
-    Bonf_sum <- data.frame(Holm_sum = Holm_res2, Bonf_sum = Bonf_sum)
+    LP_data <- expand.grid(x1=x1,x2=x2)
+    LP_data$signal     <- as.integer(signal_data)+1
+    RE_eff <- rnorm(N)
+    
+    # t_eta <- RFsimulate(model = RMstable(alpha = 2, scale = sig_sp, var = eta_var), x=x, y=x,grid=TRUE,n=1)
+    t_data <- RFsimulate(model = RMstable(alpha = 2, scale = lat_sp,var = 1), x=x, y=x,grid=TRUE,n=N)
+    
+    Z_cont <- matrix(array(t_data),M,N)
+    Z <- 1*I(Z_cont < 0)
+    
+    t_data <- RFsimulate(model = RMstable(alpha = 2, scale = lat_sp,var = 1), x=x, y=x,grid=TRUE,n=N)
+    test_data = matrix(array(t_data),M,N)
+    
+    signal<- seq(1,M,1)[LP_data$signal==2]
+    sig_ind <- rep(0,M)
+    sig_ind[signal] <- 1
+    
+    
+    return(list(LP_data=LP_data, 
+                X=Z, 
+                X_cont = Z_cont, 
+                test_data = test_data,
+                signal=signal,
+                sig_ind=sig_ind))
   }
   
   
-  return(list(BH_res = BH_res, Bonf_res = Bonf_res, Bonf_sum = Bonf_sum, 
-              BH_sum = BH_sum))
-}
-
-
-
+  lasso <- function(Y,X){
+    cv.out <- cv.glmnet(X,Y,alpha = 1,nfolds = 10,lambda.min.ratio=0.001)
+    # while(cv.out$lambda.min==min(cv.out$lambda)){
+    #   ### Further decreasing the lambda if the smallest lambda was the best.
+    #   cv.out <- cv.glmnet(X,Y,alpha = 1,nfolds = 10,lambda=exp(c(log(cv.out$lambda.1se),seq(log(min(cv.out$lambda)),log(min(cv.out$lambda)*0.001),length.out = 100))))
+    # }
+    cv.out
+  }
+  
+  adap_lasso <- function(Y,X){
+    ridge1_cv <- cv.glmnet(X, Y, alpha = 0, nfolds = 10)
+    best_ridge_coef <- as.numeric(coef(ridge1_cv, s = ridge1_cv$lambda.min))[-1]
+    cv.out <- cv.glmnet(X, Y, alpha = 1, nfolds = 10, lambda.min.ratio = 0.001,
+                        penalty.factor = 1 / abs(best_ridge_coef))
+    
+    # while(cv.out$lambda.min==min(cv.out$lambda)){
+    #   ### Further decreasing the lambda if the smallest lambda was the best.
+    #   cv.out <- cv.glmnet(X, Y, alpha = 1, nfolds = 10,
+    #                       penalty.factor = 1 / abs(best_ridge_coef),
+    #                       lambda=exp(c(log(cv.out$lambda.1se), 
+    #                                    seq(log(min(cv.out$lambda)),
+    #                                        log(min(cv.out$lambda)*0.001),
+    #                                        length.out = 100))) )
+    # }
+    list(cv.out = cv.out, 
+         best_ridge_coef = best_ridge_coef)
+  }
+  
+  scad_func <- function(Y,X,N,M){
+    cv.out2 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "SCAD",lambda.min=0.01, max.iter = 50000)
+    # while(cv.out2$lambda.min==min(cv.out2$lambda)){
+    #   ### Further decreasing the lambda if the smallest lambda was the best.
+    #   cv.out2 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "SCAD",lambda=exp(seq(log(min(cv.out2$lambda)),log(min(cv.out2$lambda)/100),length.out = 20)), max.iter = 50000)
+    # }
+    cv.out2
+  }
+  
+  MCP_func <- function(Y,X,N,M){
+    cv.out3 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "MCP",lambda.min=0.01, max.iter = 50000)
+    # while(cv.out3$lambda.min==min(cv.out3$lambda)){
+    #   ### Further decreasing the lambda if the smallest lambda was the best.
+    #   cv.out3 <- cv.ncvreg(matrix(as.numeric(X),N,M),Y,family = "gaussian",penalty = "MCP",lambda=exp(seq(log(min(cv.out3$lambda)),log(min(cv.out3$lambda)/100),length.out = 20)), max.iter = 50000)
+    # }
+    cv.out3
+  }
+  
+  
+  MTR <- function(E_step, alpha, signal = NULL) {
+    
+    p_vals <- E_step$p_vals
+    lfdr_val <- E_step$lfdr
+    p_hat <- E_step$pi0
+    M <- length(p_vals)
+    alpha_hat <- alpha/p_hat
+    
+    T_R <- p.adjust(p_vals, method = "BY")
+    R_BH <- p.adjust(p_vals, method = "BH")
+    
+    threshold <- 0
+    lfdr_val[is.na(lfdr_val)] <- 1
+    if (min(lfdr_val) < alpha) {
+      threshold <- max(sort(lfdr_val)[cumsum(sort(lfdr_val)) < alpha*(1:M)])
+    }
+    
+    BH_res <- data.frame(BY = 1 * I(T_R < alpha), BH = 1 * I(R_BH < alpha), 
+                         LFDR = 1 * I(lfdr_val <= threshold))
+    
+    R_BY <- p.adjust(p_vals, method = "bonferroni")
+    R2_BY <- p.adjust(p_vals, method = "holm")
+    
+    Bonf_res <- data.frame(Holm = 1 * I(R2_BY < alpha), Bonf = 1 * I(R_BY < alpha))
+    
+    BH_sum <- apply(BH_res,2,sum)
+    Bonf_sum <- apply(Bonf_res,2,sum)
+    if (!is.null(signal)) {
+      n_signal <- !(1:M %in% signal)
+      BH_sum <- c(sum(BH_res$BH), sum(BH_res$BH[signal]), sum(BH_res$BH[n_signal]))
+      LFDR_res <- c(sum(BH_res$LFDR), sum(BH_res$LFDR[signal]), sum(BH_res$LFDR[n_signal]))
+      BY_res <- c(sum(BH_res$BY), sum(BH_res$BY[signal]), sum(BH_res$BY[n_signal]))
+      BH_sum <- data.frame(BY_sum = BY_res, LFDR_sum = LFDR_res, BH_sum = BH_sum)
+      
+      Bonf_sum <- c(sum(Bonf_res$Bonf), sum(Bonf_res$Bonf[signal]), sum(Bonf_res$Bonf[n_signal]))
+      Holm_res2 <- c(sum(Bonf_res$Holm), sum(Bonf_res$Holm[signal]), 
+                     sum(Bonf_res$Holm[n_signal]))
+      
+      Bonf_sum <- data.frame(Holm_sum = Holm_res2, Bonf_sum = Bonf_sum)
+    }
+    
+    
+    return(list(BH_res = BH_res, Bonf_res = Bonf_res, Bonf_sum = Bonf_sum, 
+                BH_sum = BH_sum))
+  }
+  
+  
+  
+  
