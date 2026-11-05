@@ -8,9 +8,9 @@ Description: Implements an efficient and powerful Bayesian approach for sparse h
 BugReports: https://github.com/alexmclain/PROBE/issues
 License: GPL (>= 2)
 Encoding: UTF-8
-RoxygenNote: 7.3.2
-Imports: Rcpp, glmnet, RcppArmadillo
+Imports: Rcpp, glmnet, RcppArmadillo, fields
 LinkingTo: Rcpp, RcppArmadillo
 NeedsCompilation: yes
 Packaged: 2023-04-30 14:02:19 UTC; anjazgodic
 Depends: R (>= 4.00)
+Config/roxygen2/version: 8.0.0

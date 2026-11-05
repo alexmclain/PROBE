@@ -4,24 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-An R package (`probe`) implementing two Bayesian sparse high-dimensional linear regression algorithms:
+An R package (`probe`) implementing Bayesian sparse high-dimensional linear regression algorithms:
 
 - **PROBE** (PaRtitiOned empirical Bayes ECM): for homoscedastic models
 - **H-PROBE**: extends PROBE to handle heteroscedastic (non-constant variance) models
+- **Spatial PROBE**: extension for spatially-structured data (active development on `adding-spatial` branch)
 
-The package is published on CRAN and GitHub at `alexmclain/PROBE` (subdir `probe`). It requires compilation of C++ code via `Rcpp`/`RcppArmadillo`.
+The package is published on CRAN and GitHub at `alexmclain/PROBE` (subdir `probe`). Version 1.3. Requires compilation of C++ code via `Rcpp`/`RcppArmadillo`.
 
 ## Repository Layout
 
 ```
-probe/              # The R package source
+probe/              # The R package source (v1.3)
   R/                # R source files
   src/              # C++ source files (Rcpp/RcppArmadillo)
   data/             # .rda datasets for examples and tests
   man/              # Roxygen2-generated documentation
-  DESCRIPTION       # Package metadata (version 1.2)
-Drug Response Example/   # Reproducible real-data example scripts
-Simulation functions/    # Simulation study scripts
+Drug Response Example/   # Reproducible real-data example (CCLE data)
+Simulation functions/    # Simulation study scripts (Sim_funcs.R, Sim_funcs_sp.R)
 probe-manual.pdf    # Full PDF manual
 ```
 
@@ -30,11 +30,14 @@ probe-manual.pdf    # Full PDF manual
 | Function | File | Role |
 |---|---|---|
 | `probe()` | `R/probe_wrapper.R` | Main entry point for PROBE (all-at-once variant) |
+| `probe_one()` | `R/probe_wrapper_one.R` | One-at-a-time variant of PROBE |
 | `hprobe()` | `R/hprobe.R` | Main entry point for H-PROBE |
 | `predict_probe_func()` | `R/predict_probe_func.R` | Predictions + credible/prediction intervals from PROBE |
 | `predict_hprobe_func()` | `R/predict_hprobe_func.R` | Predictions + intervals from H-PROBE |
 | `e_step_func()` | `R/e_step_func.R` | Empirical Bayes E-step (estimates γ posteriors via local FDR) |
+| `e_step_func_sp()` | `R/e_step_func_sp.R` | E-step variant for spatial models |
 | `m_step_regression()` | `R/m_step_func.R` | M-step for α₀ and σ² (calibration model) |
+| (spatial fns) | `R/sp_probe.R` | Spatial PROBE extension functions |
 
 ## Algorithm Architecture
 
@@ -96,15 +99,19 @@ devtools::document("probe")
 library(probe)
 # PROBE example
 data(Sim_data); data(Sim_data_test)
-attach(Sim_data); attach(Sim_data_test)
-full_res <- probe(Y = Y, X = X, Y_test = Y_test, X_test = X_test,
+full_res <- probe(Y = Sim_data$Y, X = Sim_data$X,
+                  Y_test = Sim_data_test$Y_test, X_test = Sim_data_test$X_test,
                   alpha = 0.05, plot_ind = TRUE)
-pred_res <- predict_probe_func(full_res, X = X_test)
+pred_res <- predict_probe_func(full_res, X = Sim_data_test$X_test)
+
+# PROBE with covariates (Z)
+data(Sim_data_cov)
+full_res <- probe(Y = Sim_data_cov$Y, X = Sim_data_cov$X, Z = Sim_data_cov$Z)
 
 # H-PROBE example
-data(h_Sim_data); attach(h_sim_data)
-res <- hprobe(Y = Y, X = X, V = V)
-pred_res <- predict_hprobe_func(res, X_test, V = V_test)
+data(h_Sim_data)  # loads as h_sim_data (lowercase s)
+res <- hprobe(Y = h_sim_data$Y, X = h_sim_data$X, V = h_sim_data$V)
+pred_res <- predict_hprobe_func(res, h_sim_data$X_test, V = h_sim_data$V_test)
 ```
 
 ### Check the package

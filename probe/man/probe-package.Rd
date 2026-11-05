@@ -27,6 +27,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Alexander McLain \email{mclaina@mailbox.sc.edu} (\href{https://orcid.org/0000-0002-5475-0670}{ORCID})
   \item Anja Zgodic [contributor]
 }
 

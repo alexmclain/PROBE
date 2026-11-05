@@ -23,7 +23,6 @@ predict_probe_func <- function(res, X, Z = NULL, alpha = 0.05,
   
   if(is.data.frame(X)){stop("Error: X must be a matrix or vector.")}
   M <- length(res$beta_hat)
-  E_step <- res$E_step
   mod <- res$Calb_mod
   sigma2_est <- mod$sigma2_est
   coef_est <- mod$coef
@@ -45,7 +44,7 @@ predict_probe_func <- function(res, X, Z = NULL, alpha = 0.05,
   X <- as.matrix(X)
   X_2 <- as.matrix(X_2)
   
-  W_W2_update <- m_update_func(X, X_2, E_step$beta_tilde, E_step$gamma, E_step$beta_tilde_var)
+  W_W2_update <- m_update_func(X, X_2, res$beta_hat, res$gamma_hat, res$beta_hat_var)
   W_ast <- W_W2_update$W_ast
   W_ast_var <- W_W2_update$W_ast_var
   if (!is.null(Z)) {

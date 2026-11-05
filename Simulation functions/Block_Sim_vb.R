@@ -28,7 +28,7 @@ setwd("C:/Users/mclaina/OneDrive - University of South Carolina/Research/Imaging
 
 remove(list=ls())
 source("Sim_funcs.R")
-
+source('Helpers.R')
 # library(probe)
 library(RcppArmadillo)
 require(Rcpp)

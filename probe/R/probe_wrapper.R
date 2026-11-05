@@ -389,6 +389,8 @@ plot_probe_func <- function(full_res, test_plot, alpha, signal) {
   if (test_plot) {
     ylab_val <- expression(paste("Test  ", MSPE[t]))
   }
+  op <- par(no.readonly = TRUE)
+  par(mfrow = c(1,1), mar = c(2,2,2,2)+2)
   
   plot(plot_dat$Iter, plot_dat$Pred_err, type = "l", ylim = c(b, a), 
        xlim = range(plot_dat$Iter), xlab = "Iteration", ylab = ylab_val, 
@@ -427,7 +429,7 @@ plot_probe_func <- function(full_res, test_plot, alpha, signal) {
              pch = c(19,-1), pt.lwd = c(2,0), cex = 1.3)
     }
   }
-  
+  par(op)
 }
 
 
